@@ -71,7 +71,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   useEffect(() => {
     if (!user) return;
 
-    const subscription = subscribeToReviews(fountainId, (payload) => {
+    const subscription = subscribeToReviews(fountainId, (payload: any) => {
       console.log("Real-time review update:", payload);
       // Reload the review if it's the current user's review
       if (payload.new && payload.new.user_id === user.id) {

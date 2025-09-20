@@ -1,19 +1,75 @@
-import { Calendar, Star } from "lucide-react";
+import { Calendar, Star, ThumbsUp, ThumbsDown } from "lucide-react";
 
-import React from "react";
+import React, { useState } from "react";
 import type { Review } from "../services/reviewService";
+import { voteOnReview, getUserVoteStatus } from "../services/reviewService";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 interface ReviewItemProps {
   review: Review;
   showFountainInfo?: boolean;
+  onVote?: (updatedReview: Review) => void;
 }
 
 export const ReviewItem: React.FC<ReviewItemProps> = ({
   review,
   showFountainInfo = false,
+  onVote,
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [voting, setVoting] = useState(false);
+
+  const upvotes = review.upvotes?.length || 0;
+  const downvotes = review.downvotes?.length || 0;
+  const userVoteStatus = user ? getUserVoteStatus(review, user.id) : "none";
+
+  const handleVote = async (voteType: "upvote" | "downvote" | "remove") => {
+    console.log("Vote attempt:", { voteType, user: user?.id, reviewId: review.id });
+    
+    if (!user) {
+      console.log("No user found, showing alert");
+      alert("Please sign in to vote on reviews");
+      return;
+    }
+
+    if (voting) {
+      console.log("Already voting, ignoring");
+      return;
+    }
+
+    console.log("Starting vote process...");
+    setVoting(true);
+    try {
+      const updatedReview = await voteOnReview(review.id, voteType);
+      console.log("Vote successful:", updatedReview);
+      if (onVote) {
+        onVote(updatedReview);
+      }
+    } catch (error) {
+      console.error("Error voting on review:", error);
+      alert("Failed to vote. Please try again.");
+    } finally {
+      setVoting(false);
+    }
+  };
+
+  const handleUpvote = () => {
+    if (userVoteStatus === "upvoted") {
+      handleVote("remove");
+    } else {
+      handleVote("upvote");
+    }
+  };
+
+  const handleDownvote = () => {
+    if (userVoteStatus === "downvoted") {
+      handleVote("remove");
+    } else {
+      handleVote("downvote");
+    }
+  };
 
   return (
     <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -151,6 +207,44 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
             </p>
           </div>
         )}
+
+        {/* Voting Section */}
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={handleUpvote}
+              disabled={voting || !user}
+              className={`flex items-center space-x-1 px-2 py-1 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                userVoteStatus === "upvoted"
+                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              <ThumbsUp className="h-4 w-4" />
+              <span>{upvotes}</span>
+            </button>
+            
+            <button
+              onClick={handleDownvote}
+              disabled={voting || !user}
+              className={`flex items-center space-x-1 px-2 py-1 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                userVoteStatus === "downvoted"
+                  ? "bg-red-100 text-red-700 hover:bg-red-200"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              <ThumbsDown className="h-4 w-4" />
+              <span>{downvotes}</span>
+            </button>
+          </div>
+          
+          {voting && (
+            <div className="flex items-center text-xs text-gray-500">
+              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400 mr-2"></div>
+              Voting...
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

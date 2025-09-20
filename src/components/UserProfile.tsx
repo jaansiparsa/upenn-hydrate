@@ -45,7 +45,6 @@ export const UserProfile: React.FC = () => {
       prev.map(review => review.id === updatedReview.id ? updatedReview : review)
     );
   };
-
   const isOwnProfile = currentUser?.id === id;
 
   // Fetch user profile and reviews
@@ -538,3 +537,4 @@ export const UserProfile: React.FC = () => {
     </div>
   );
 };
+

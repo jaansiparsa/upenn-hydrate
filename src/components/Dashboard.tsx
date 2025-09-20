@@ -2,20 +2,24 @@ import {
   Droplets,
   LogOut,
   MapPin,
+  Menu,
   Plus,
   Rss,
   Search,
   Trophy,
   UserCircle,
+  X,
 } from "lucide-react";
 import React, { useState } from "react";
 
 import { AddFountainForm } from "./AddFountainForm";
 import { Feed } from "./Feed";
+import { FountainSearchModal } from "./FountainSearchModal";
 import { Leaderboard } from "./Leaderboard";
 import { Map } from "./Map";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import type { Fountain } from "../services/fountainService";
 
 export const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -24,15 +28,26 @@ export const Dashboard: React.FC = () => {
     "fountains" | "feed" | "leaderboard" | "profile"
   >("fountains");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [filteredFountains, setFilteredFountains] = useState<Fountain[] | undefined>(undefined);
 
   const handleFindFountain = () => {
-    // TODO: Implement fountain search functionality
-    console.log("Find a fountain clicked");
-    // This could open a search modal or filter the map
+    setShowSearchModal(true);
   };
 
   const handleAddFountain = () => {
     setShowAddForm(true);
+  };
+
+  const handleFountainSelect = (fountain: Fountain) => {
+    // Filter map to show only the selected fountain
+    setFilteredFountains([fountain]);
+    setShowSearchModal(false);
+  };
+
+  const handleClearFilter = () => {
+    setFilteredFountains(undefined);
   };
 
   const handleSignOut = async () => {
@@ -64,8 +79,8 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Tab Navigation */}
-            <div className="flex items-center space-x-6">
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-6">
               <nav className="flex space-x-6">
                 <button
                   onClick={() => setActiveTab("fountains")}
@@ -121,7 +136,97 @@ export const Dashboard: React.FC = () => {
                 Sign out
               </button>
             </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                aria-expanded="false"
+              >
+                <span className="sr-only">Open main menu</span>
+                {isMobileMenuOpen ? (
+                  <X className="block h-6 w-6" aria-hidden="true" />
+                ) : (
+                  <Menu className="block h-6 w-6" aria-hidden="true" />
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Mobile Navigation Menu */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden">
+              <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-50 rounded-lg mt-2">
+                <button
+                  onClick={() => {
+                    setActiveTab("fountains");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-md text-base font-medium flex items-center ${
+                    activeTab === "fountains"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  }`}
+                >
+                  <Droplets className="h-5 w-5 mr-3" />
+                  Fountains
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("feed");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-md text-base font-medium flex items-center ${
+                    activeTab === "feed"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  }`}
+                >
+                  <Rss className="h-5 w-5 mr-3" />
+                  Feed
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab("leaderboard");
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-md text-base font-medium flex items-center ${
+                    activeTab === "leaderboard"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  }`}
+                >
+                  <Trophy className="h-5 w-5 mr-3" />
+                  Leaderboard
+                </button>
+                <button
+                  onClick={() => {
+                    navigate(`/user/${user?.id}`);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-md text-base font-medium flex items-center ${
+                    activeTab === "profile"
+                      ? "bg-blue-100 text-blue-700"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  }`}
+                >
+                  <UserCircle className="h-5 w-5 mr-3" />
+                  Profile
+                </button>
+                <button
+                  onClick={() => {
+                    handleSignOut();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-md text-base font-medium flex items-center text-red-600 hover:text-red-700 hover:bg-red-50"
+                >
+                  <LogOut className="h-5 w-5 mr-3" />
+                  Sign out
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
@@ -155,21 +260,33 @@ export const Dashboard: React.FC = () => {
                   <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                     <button
                       onClick={handleFindFountain}
-                      className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                      className="inline-flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors touch-manipulation min-h-[44px]"
                     >
                       <Search className="h-4 w-4 mr-2" />
                       Find a Fountain
                     </button>
+                    {filteredFountains && (
+                      <button
+                        onClick={handleClearFilter}
+                        className="inline-flex items-center justify-center px-4 py-3 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors touch-manipulation min-h-[44px]"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Clear Filter
+                      </button>
+                    )}
                     <button
                       onClick={handleAddFountain}
-                      className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                      className="inline-flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors touch-manipulation min-h-[44px]"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Add a Fountain
                     </button>
                   </div>
                 </div>
-                <Map className="h-[600px] rounded-lg shadow-lg" />
+                <Map 
+                  className="h-[400px] sm:h-[500px] md:h-[600px] rounded-lg shadow-lg" 
+                  filteredFountains={filteredFountains}
+                />
               </div>
             </>
           )}
@@ -179,6 +296,13 @@ export const Dashboard: React.FC = () => {
           {activeTab === "leaderboard" && <Leaderboard />}
         </div>
       </main>
+
+      {/* Search Modal */}
+      <FountainSearchModal
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        onFountainSelect={handleFountainSelect}
+      />
     </div>
   );
 };

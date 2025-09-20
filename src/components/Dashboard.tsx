@@ -5,12 +5,14 @@ import {
   Plus,
   Rss,
   Search,
+  Trophy,
   UserCircle,
 } from "lucide-react";
 import React, { useState } from "react";
 
 import { AddFountainForm } from "./AddFountainForm";
 import { Feed } from "./Feed";
+import { Leaderboard } from "./Leaderboard";
 import { Map } from "./Map";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -18,9 +20,9 @@ import { useNavigate } from "react-router-dom";
 export const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"fountains" | "feed" | "profile">(
-    "fountains"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "fountains" | "feed" | "leaderboard" | "profile"
+  >("fountains");
   const [showAddForm, setShowAddForm] = useState(false);
 
   const handleFindFountain = () => {
@@ -78,6 +80,17 @@ export const Dashboard: React.FC = () => {
                 >
                   <Rss className="h-4 w-4 mr-1" />
                   Feed
+                </button>
+                <button
+                  onClick={() => setActiveTab("leaderboard")}
+                  className={`py-2 px-3 border-b-2 font-medium text-sm flex items-center ${
+                    activeTab === "leaderboard"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <Trophy className="h-4 w-4 mr-1" />
+                  Leaderboard
                 </button>
                 <button
                   onClick={() => navigate(`/user/${user?.id}`)}
@@ -151,6 +164,8 @@ export const Dashboard: React.FC = () => {
           )}
 
           {activeTab === "feed" && <Feed />}
+
+          {activeTab === "leaderboard" && <Leaderboard />}
         </div>
       </main>
     </div>

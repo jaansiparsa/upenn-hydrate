@@ -1,4 +1,4 @@
-import { Calendar, Edit3, MapPin, Save, Star, User, X } from "lucide-react";
+import { Calendar, Edit3, Save, Star, User, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import type { Review } from "../services/reviewService";

@@ -11,6 +11,8 @@ import {
   Eye,
   Camera,
   Upload,
+  RotateCcw,
+  Check,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -20,6 +22,9 @@ import { getUserReviews } from "../services/reviewService";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { ReviewItem } from "./ReviewItem";
+import { BadgeDisplay } from "./BadgeDisplay";
+import { BadgeNotification, useBadgeNotifications } from "./BadgeNotification";
+import { checkAndAwardBadges } from "../services/badgeService";
 
 export const UserProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,7 +38,7 @@ export const UserProfile: React.FC = () => {
     badges: string[];
     followers: string[];
     following: string[];
-    profile_photo_url?: string;
+    profile_picture_url?: string;
   } | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,11 +51,16 @@ export const UserProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
-  const [followersList, setFollowersList] = useState<Array<{id: string, display_name?: string, email?: string}>>([]);
-  const [followingList, setFollowingList] = useState<Array<{id: string, display_name?: string, email?: string}>>([]);
+  const [followersList, setFollowersList] = useState<Array<{id: string, display_name?: string, email?: string, profile_picture_url?: string}>>([]);
+  const [followingList, setFollowingList] = useState<Array<{id: string, display_name?: string, email?: string, profile_picture_url?: string}>>([]);
   const [loadingLists, setLoadingLists] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const { notifications, showBadgeEarned, removeNotification } = useBadgeNotifications();
 
   // Handle vote updates
   const handleVote = (updatedReview: Review) => {
@@ -70,7 +80,7 @@ export const UserProfile: React.FC = () => {
       setLoadingLists(true);
       const { data, error } = await supabase
         .from("users")
-        .select("id, display_name, email")
+        .select("id, display_name, email, profile_picture_url")
         .in("id", profile.followers);
 
       if (error) throw error;
@@ -94,7 +104,7 @@ export const UserProfile: React.FC = () => {
       setLoadingLists(true);
       const { data, error } = await supabase
         .from("users")
-        .select("id, display_name, email")
+        .select("id, display_name, email, profile_picture_url")
         .in("id", profile.following);
 
       if (error) throw error;
@@ -119,7 +129,309 @@ export const UserProfile: React.FC = () => {
     await fetchFollowingList();
   };
 
+  // Handle photo upload
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !profile) {
+      console.error('No file or profile found:', { file: !!file, profile: !!profile });
+      return;
+    }
+
+    console.log('Starting photo upload:', { 
+      fileName: file.name, 
+      fileSize: file.size, 
+      fileType: file.type,
+      profileId: profile.id 
+    });
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image must be smaller than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      setError(null);
+
+      // Check if storage bucket exists
+      await ensureStorageBucket();
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${profile.id}.${fileExt}`;
+      const filePath = `${profile.id}/${fileName}`;
+
+      console.log('Uploading to storage:', { filePath, bucket: 'profile-pictures' });
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-pictures')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw new Error(`Storage error: ${uploadError.message}`);
+      }
+
+      console.log('Storage upload successful');
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(filePath);
+
+      console.log('Got public URL:', data.publicUrl);
+
+      // Update user profile with photo URL
+      console.log('Updating user profile with photo URL...');
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ profile_picture_url: data.publicUrl })
+        .eq('id', profile.id);
+
+      if (updateError) {
+        console.error('Database update error:', updateError);
+        throw new Error(`Database error: ${updateError.message}`);
+      }
+
+      console.log('Profile update successful');
+
+      // Update local state
+      setProfile(prev => prev ? { ...prev, profile_picture_url: data.publicUrl } : null);
+      setPhotoPreview(null);
+
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      setError(`Failed to upload photo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  // Handle photo removal
+  const handlePhotoRemove = async () => {
+    if (!profile?.profile_picture_url) return;
+
+    try {
+      setUploadingPhoto(true);
+      setError(null);
+
+      // Remove from storage
+      const fileName = profile.profile_picture_url.split('/').pop();
+      const filePath = `${profile.id}/${fileName}`;
+
+      await supabase.storage
+        .from('profile-pictures')
+        .remove([filePath]);
+
+      // Update user profile
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ profile_picture_url: null })
+        .eq('id', profile.id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setProfile(prev => prev ? { ...prev, profile_picture_url: undefined } : null);
+
+    } catch (error) {
+      console.error('Error removing photo:', error);
+      setError('Failed to remove photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  // Camera functionality
+  const startCamera = async () => {
+    try {
+      setError(null);
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'user',
+          width: { ideal: 640 },
+          height: { ideal: 640 }
+        }
+      });
+      setStream(mediaStream);
+      setShowCamera(true);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      setError('Unable to access camera. Please check permissions.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setShowCamera(false);
+    setCapturedPhoto(null);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef) return;
+
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    if (!context) return;
+
+    canvas.width = videoRef.videoWidth;
+    canvas.height = videoRef.videoHeight;
+    
+    context.drawImage(videoRef, 0, 0);
+    const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    setCapturedPhoto(photoDataUrl);
+  };
+
+  const retakePhoto = () => {
+    setCapturedPhoto(null);
+  };
+
+  const useCapturedPhoto = async () => {
+    if (!capturedPhoto || !profile) {
+      console.error('No captured photo or profile found:', { 
+        capturedPhoto: !!capturedPhoto, 
+        profile: !!profile 
+      });
+      return;
+    }
+
+    try {
+      setUploadingPhoto(true);
+      setError(null);
+
+      console.log('Processing captured photo for profile:', profile.id);
+
+      // Check if storage bucket exists
+      await ensureStorageBucket();
+
+      // Convert data URL to blob
+      const response = await fetch(capturedPhoto);
+      const blob = await response.blob();
+      
+      // Create file from blob
+      const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+
+      console.log('Created file from captured photo:', { 
+        fileName: file.name, 
+        fileSize: file.size, 
+        fileType: file.type 
+      });
+
+      // Upload to Supabase Storage
+      const filePath = `${profile.id}/camera-photo.jpg`;
+
+      console.log('Uploading captured photo to storage:', { filePath, bucket: 'profile-photos' });
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-pictures')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('Storage upload error for captured photo:', uploadError);
+        throw new Error(`Storage error: ${uploadError.message}`);
+      }
+
+      console.log('Captured photo storage upload successful');
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(filePath);
+
+      console.log('Got public URL for captured photo:', data.publicUrl);
+
+      // Update user profile with photo URL
+      console.log('Updating user profile with captured photo URL...');
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ profile_picture_url: data.publicUrl })
+        .eq('id', profile.id);
+
+      if (updateError) {
+        console.error('Database update error for captured photo:', updateError);
+        throw new Error(`Database error: ${updateError.message}`);
+      }
+
+      console.log('Captured photo profile update successful');
+
+      // Update local state
+      setProfile(prev => prev ? { ...prev, profile_picture_url: data.publicUrl } : null);
+      
+      // Clean up
+      stopCamera();
+
+    } catch (error) {
+      console.error('Error uploading captured photo:', error);
+      setError(`Failed to upload photo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const isOwnProfile = currentUser?.id === id;
+
+  // Check and create storage bucket if needed
+  const ensureStorageBucket = async () => {
+    try {
+      // Try to list files in the bucket to check if it exists
+      const { data, error } = await supabase.storage
+        .from('profile-pictures')
+        .list('', { limit: 1 });
+
+      if (error && error.message.includes('not found')) {
+        console.log('Storage bucket not found, creating...');
+        // The bucket doesn't exist, we need to create it
+        // This should be done via the migration, but let's handle it gracefully
+        throw new Error('Storage bucket "profile-pictures" does not exist. Please run the database migration first.');
+      }
+      
+      console.log('Storage bucket exists and is accessible');
+      return true;
+    } catch (error) {
+      console.error('Storage bucket check failed:', error);
+      throw error;
+    }
+  };
+
+  // Handle video stream
+  useEffect(() => {
+    if (videoRef && stream) {
+      videoRef.srcObject = stream;
+    }
+  }, [videoRef, stream]);
+
+  // Cleanup camera stream on unmount
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
 
   // Fetch user profile and reviews
   useEffect(() => {
@@ -355,6 +667,14 @@ export const UserProfile: React.FC = () => {
       if (!refreshError && updatedProfile) {
         setProfile(updatedProfile);
       }
+
+      // Check for new badges after follow action
+      if (currentUser) {
+        const newBadges = await checkAndAwardBadges(currentUser.id, 'user_followed', {});
+        newBadges.forEach(badgeName => {
+          showBadgeEarned(badgeName, '🤝', `You earned the ${badgeName} badge!`, 'bronze');
+        });
+      }
     } catch (error) {
       console.error("Error updating follow status:", error);
       setError("Failed to update follow status");
@@ -448,8 +768,52 @@ export const UserProfile: React.FC = () => {
       <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
-            <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="h-8 w-8 text-blue-600" />
+            <div className="relative">
+              <div className="h-16 w-16 rounded-full overflow-hidden bg-blue-100 flex items-center justify-center">
+                {profile.profile_picture_url || photoPreview ? (
+                  <img
+                    src={photoPreview || profile.profile_picture_url}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <User className="h-8 w-8 text-blue-600" />
+                )}
+              </div>
+              {isOwnProfile && (
+                <div className="absolute -bottom-1 -right-1">
+                  <div className="flex space-x-1">
+                    <label className="cursor-pointer">
+                      <div className="h-6 w-6 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors">
+                        <Upload className="h-3 w-3 text-white" />
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                        disabled={uploadingPhoto}
+                      />
+                    </label>
+                    <button
+                      onClick={startCamera}
+                      disabled={uploadingPhoto}
+                      className="h-6 w-6 bg-green-600 rounded-full flex items-center justify-center hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                      <Camera className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                </div>
+              )}
+              {isOwnProfile && profile.profile_picture_url && (
+                <button
+                  onClick={handlePhotoRemove}
+                  disabled={uploadingPhoto}
+                  className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors disabled:opacity-50"
+                >
+                  <X className="h-3 w-3 text-white" />
+                </button>
+              )}
             </div>
             <div className="flex-1">
               {editingName && isOwnProfile ? (
@@ -555,6 +919,15 @@ export const UserProfile: React.FC = () => {
           )}
         </div>
 
+        {/* Photo Upload Status */}
+        {uploadingPhoto && (
+          <div className="mb-4 bg-blue-50 border border-blue-200 rounded-md p-3">
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              <p className="text-sm text-blue-600">Uploading photo...</p>
+            </div>
+          </div>
+        )}
 
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -594,6 +967,17 @@ export const UserProfile: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Badges Section */}
+      <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+        <div className="flex items-center mb-6">
+          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+            <span className="text-yellow-600 text-lg">🏆</span>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900">Badges & Achievements</h2>
+        </div>
+        <BadgeDisplay userId={profile.id} showProgress={true} compact={false} />
       </div>
 
       {/* Reviews Section */}
@@ -694,8 +1078,16 @@ export const UserProfile: React.FC = () => {
                         navigate(`/user/${follower.id}`);
                       }}
                     >
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                        <User className="w-5 h-5 text-green-600" />
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3 overflow-hidden">
+                        {follower.profile_picture_url ? (
+                          <img
+                            src={follower.profile_picture_url}
+                            alt={follower.display_name || "User"}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-5 h-5 text-green-600" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <div className="font-medium text-gray-900 hover:text-green-700 transition-colors">
@@ -755,8 +1147,16 @@ export const UserProfile: React.FC = () => {
                         navigate(`/user/${following.id}`);
                       }}
                     >
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                        <User className="w-5 h-5 text-purple-600" />
+                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3 overflow-hidden">
+                        {following.profile_picture_url ? (
+                          <img
+                            src={following.profile_picture_url}
+                            alt={following.display_name || "User"}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-5 h-5 text-purple-600" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <div className="font-medium text-gray-900 hover:text-purple-700 transition-colors">
@@ -779,6 +1179,118 @@ export const UserProfile: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Camera Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Camera className="w-5 h-5 mr-2 text-green-600" />
+                Take Photo
+              </h3>
+              <button
+                onClick={stopCamera}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4">
+              {!capturedPhoto ? (
+                <div className="space-y-4">
+                  <div className="relative bg-gray-100 rounded-lg overflow-hidden" style={{ aspectRatio: '1/1' }}>
+                    <video
+                      ref={setVideoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 border-2 border-white rounded-lg pointer-events-none"></div>
+                  </div>
+                  
+                  <div className="flex justify-center space-x-4">
+                    <button
+                      onClick={capturePhoto}
+                      className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <Camera className="w-5 h-5 mr-2" />
+                      Capture
+                    </button>
+                    <button
+                      onClick={stopCamera}
+                      className="flex items-center px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <X className="w-5 h-5 mr-2" />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative bg-gray-100 rounded-lg overflow-hidden" style={{ aspectRatio: '1/1' }}>
+                    <img
+                      src={capturedPhoto}
+                      alt="Captured photo"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  
+                  <div className="flex justify-center space-x-4">
+                    <button
+                      onClick={useCapturedPhoto}
+                      disabled={uploadingPhoto}
+                      className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                      {uploadingPhoto ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-5 h-5 mr-2" />
+                          Use Photo
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={retakePhoto}
+                      disabled={uploadingPhoto}
+                      className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    >
+                      <RotateCcw className="w-5 h-5 mr-2" />
+                      Retake
+                    </button>
+                    <button
+                      onClick={stopCamera}
+                      disabled={uploadingPhoto}
+                      className="flex items-center px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50"
+                    >
+                      <X className="w-5 h-5 mr-2" />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Badge Notifications */}
+      {notifications.map((notification) => (
+        <BadgeNotification
+          key={notification.id}
+          badgeName={notification.badgeName}
+          badgeIcon={notification.badgeIcon}
+          badgeDescription={notification.badgeDescription}
+          badgeTier={notification.badgeTier}
+          onClose={() => removeNotification(notification.id)}
+        />
+      ))}
     </div>
   );
 };

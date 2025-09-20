@@ -15,6 +15,7 @@ export interface Review {
   users?: {
     display_name?: string;
     email?: string;
+    profile_picture_url?: string;
   };
   fountains?: {
     name: string;
@@ -51,7 +52,8 @@ export const getFountainReviews = async (
       *,
       users:user_id (
         display_name,
-        email
+        email,
+        profile_picture_url
       )
     `
     )
@@ -290,7 +292,8 @@ export const voteOnReview = async (
       *,
       users:user_id (
         display_name,
-        email
+        email,
+        profile_picture_url
       )
     `
     )

@@ -1,7 +1,9 @@
 import {
   Droplets,
+  Heart,
   LogOut,
   MapPin,
+  MessageCircle,
   Plus,
   Rss,
   Search,
@@ -12,8 +14,10 @@ import React, { useState } from "react";
 
 import { AddFountainForm } from "./AddFountainForm";
 import { Feed } from "./Feed";
+import { HyDATEr } from "./HyDATEr";
 import { Leaderboard } from "./Leaderboard";
 import { Map } from "./Map";
+import { Messages } from "./Messages";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -21,9 +25,13 @@ export const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
-    "fountains" | "feed" | "leaderboard" | "profile"
+    "fountains" | "feed" | "leaderboard" | "hydater" | "messages" | "profile"
   >("fountains");
   const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedMessageUser, setSelectedMessageUser] = useState<{
+    userId: string;
+    userName?: string;
+  } | null>(null);
 
   const handleFindFountain = () => {
     // TODO: Implement fountain search functionality
@@ -35,8 +43,18 @@ export const Dashboard: React.FC = () => {
     setShowAddForm(true);
   };
 
+  const handleStartMessage = (userId: string, userName?: string) => {
+    setSelectedMessageUser({ userId, userName });
+    setActiveTab("messages");
+  };
+
   const handleSignOut = async () => {
-    await signOut();
+    try {
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   // Show add fountain form if requested
@@ -99,6 +117,28 @@ export const Dashboard: React.FC = () => {
                 >
                   <Trophy className="h-4 w-4 mr-1" />
                   Leaderboard
+                </button>
+                <button
+                  onClick={() => setActiveTab("hydater")}
+                  className={`py-2 px-3 border-b-2 font-medium text-sm flex items-center ${
+                    activeTab === "hydater"
+                      ? "border-pink-500 text-pink-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <Heart className="h-4 w-4 mr-1" />
+                  hyDATEr
+                </button>
+                <button
+                  onClick={() => setActiveTab("messages")}
+                  className={`py-2 px-3 border-b-2 font-medium text-sm flex items-center ${
+                    activeTab === "messages"
+                      ? "border-blue-500 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  <MessageCircle className="h-4 w-4 mr-1" />
+                  Messages
                 </button>
                 <button
                   onClick={() => navigate(`/user/${user?.id}`)}
@@ -177,6 +217,17 @@ export const Dashboard: React.FC = () => {
           {activeTab === "feed" && <Feed />}
 
           {activeTab === "leaderboard" && <Leaderboard />}
+
+          {activeTab === "hydater" && (
+            <HyDATEr onStartMessage={handleStartMessage} />
+          )}
+
+          {activeTab === "messages" && (
+            <Messages
+              initialUserId={selectedMessageUser?.userId}
+              initialUserName={selectedMessageUser?.userName}
+            />
+          )}
         </div>
       </main>
     </div>

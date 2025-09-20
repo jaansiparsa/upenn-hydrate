@@ -511,6 +511,7 @@ export const FountainDetail: React.FC = () => {
                     review={review}
                     showFountainInfo={false}
                     onVote={handleVote}
+                    showComments={true}
                   />
                 ))}
               </div>

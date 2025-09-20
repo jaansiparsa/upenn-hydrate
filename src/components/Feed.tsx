@@ -1,8 +1,8 @@
+import { Globe, RefreshCw, Rss, UserCheck } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import type { Review } from "../services/reviewService";
 import { ReviewItem } from "./ReviewItem";
-import { Rss, UserCheck, Globe, RefreshCw } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -21,11 +21,15 @@ export const Feed: React.FC = () => {
   // Handle vote updates
   const handleVote = (updatedReview: Review) => {
     // Update the review in both allReviews and filtered reviews
-    setAllReviews(prev => 
-      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    setAllReviews((prev) =>
+      prev.map((review) =>
+        review.id === updatedReview.id ? updatedReview : review
+      )
     );
-    setReviews(prev => 
-      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    setReviews((prev) =>
+      prev.map((review) =>
+        review.id === updatedReview.id ? updatedReview : review
+      )
     );
   };
 
@@ -55,7 +59,9 @@ export const Feed: React.FC = () => {
   const filterReviews = (reviews: Review[], filterType: FilterType) => {
     switch (filterType) {
       case "following":
-        return reviews.filter(review => followingUsers.includes(review.user_id));
+        return reviews.filter((review) =>
+          followingUsers.includes(review.user_id)
+        );
       case "all":
       default:
         return reviews;
@@ -85,7 +91,10 @@ export const Feed: React.FC = () => {
         )
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
 
       const reviewsData = data as Review[];
       setAllReviews(reviewsData);
@@ -177,10 +186,11 @@ export const Feed: React.FC = () => {
         </div>
         <div className="flex items-center space-x-4">
           <span className="text-sm text-gray-600">
-            {filter === "all" 
+            {filter === "all"
               ? `${reviews.length} review${reviews.length !== 1 ? "s" : ""}`
-              : `${reviews.length} of ${allReviews.length} review${allReviews.length !== 1 ? "s" : ""}`
-            }
+              : `${reviews.length} of ${allReviews.length} review${
+                  allReviews.length !== 1 ? "s" : ""
+                }`}
           </span>
           <button
             onClick={refreshFeed}
@@ -188,7 +198,7 @@ export const Feed: React.FC = () => {
             className="inline-flex items-center px-2 py-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
             title="Refresh feed"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
       </div>
@@ -207,7 +217,7 @@ export const Feed: React.FC = () => {
             <Globe className="h-4 w-4 mr-2" />
             All Reviews
           </button>
-          
+
           {user && (
             <button
               onClick={() => setFilter("following")}
@@ -226,12 +236,16 @@ export const Feed: React.FC = () => {
             </button>
           )}
         </div>
-        
+
         {/* Filter Description */}
         <div className="mt-2 text-xs text-gray-500">
           {filter === "all" && "Showing all reviews from all users"}
-          {filter === "following" && user && `Showing reviews from ${followingUsers.length} users you follow`}
-          {filter === "following" && !user && "Please sign in to see reviews from users you follow"}
+          {filter === "following" &&
+            user &&
+            `Showing reviews from ${followingUsers.length} users you follow`}
+          {filter === "following" &&
+            !user &&
+            "Please sign in to see reviews from users you follow"}
         </div>
       </div>
 
@@ -243,6 +257,7 @@ export const Feed: React.FC = () => {
               review={review}
               showFountainInfo={true}
               onVote={handleVote}
+              showComments={true}
             />
           ))}
         </div>

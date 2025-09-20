@@ -499,6 +499,7 @@ export const UserProfile: React.FC = () => {
                 review={review}
                 showFountainInfo={true}
                 onVote={handleVote}
+                showComments={true}
               />
             ))}
           </div>

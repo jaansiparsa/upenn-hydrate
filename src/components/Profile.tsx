@@ -287,7 +287,11 @@ export const Profile: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <ReviewCard review={review} user={review.users} />
+                <ReviewCard
+                  review={review}
+                  user={review.users}
+                  showComments={true}
+                />
               </div>
             ))}
           </div>

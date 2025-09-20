@@ -11,6 +11,7 @@ import { AuthForm } from "./components/AuthForm";
 import { ConfigurationError } from "./components/ConfigurationError";
 import { Dashboard } from "./components/Dashboard";
 import { FountainDetail } from "./components/FountainDetail";
+import { UserProfile } from "./components/UserProfile";
 import { supabaseConfig } from "./config/supabase";
 
 const AppContent: React.FC = () => {
@@ -44,6 +45,7 @@ const AppContent: React.FC = () => {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/fountain/:id" element={<FountainDetail />} />
+        <Route path="/user/:id" element={<UserProfile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );

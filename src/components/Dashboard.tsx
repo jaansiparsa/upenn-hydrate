@@ -48,7 +48,15 @@ export const Dashboard: React.FC = () => {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-gray-900">Hydrate</h1>
+                <h1 className="text-2xl font-bold">
+                  <span style={{color: '#DBE5FF'}}>H</span>
+                  <span style={{color: '#A9BDF1'}}>y</span>
+                  <span style={{color: '#88A3E9'}}>d</span>
+                  <span style={{color: '#446FE0'}}>r</span>
+                  <span style={{color: '#0F44CD'}}>a</span>
+                  <span style={{color: '#0836AB'}}>t</span>
+                  <span style={{color: '#062472'}}>e</span>
+                </h1>
               </div>
             </div>
 
@@ -114,7 +122,7 @@ export const Dashboard: React.FC = () => {
                   Welcome back, {user?.email?.split("@")[0]}!
                 </h2>
                 <p className="text-gray-600">
-                  Explore water fountains around UPenn campus.
+                  Explore water fountains around Penn's campus.
                 </p>
               </div>
 

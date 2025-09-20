@@ -57,6 +57,26 @@ export const getFountains = async (): Promise<Fountain[]> => {
   return data || [];
 };
 
+// Search fountains by name, building, or description
+export const searchFountains = async (query: string): Promise<Fountain[]> => {
+  if (!query.trim()) {
+    return getFountains();
+  }
+
+  const { data, error } = await supabase
+    .from("fountains")
+    .select("*")
+    .or(`name.ilike.%${query}%,building.ilike.%${query}%,description.ilike.%${query}%`)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Error searching fountains:", error);
+    throw error;
+  }
+
+  return data || [];
+};
+
 // Fetch a single fountain by ID
 export const getFountain = async (id: string): Promise<Fountain | null> => {
   const { data, error } = await supabase

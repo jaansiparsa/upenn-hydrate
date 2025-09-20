@@ -14,9 +14,10 @@ import { useNavigate } from "react-router-dom";
 
 interface MapProps {
   className?: string;
+  filteredFountains?: Fountain[];
 }
 
-export const Map: React.FC<MapProps> = ({ className = "" }) => {
+export const Map: React.FC<MapProps> = ({ className = "", filteredFountains }) => {
   const navigate = useNavigate();
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -92,7 +93,10 @@ export const Map: React.FC<MapProps> = ({ className = "" }) => {
     // Clear existing markers
     clearMarkers();
 
-    fountains.forEach((fountain) => {
+    // Use filtered fountains if provided, otherwise use all fountains
+    const fountainsToShow = filteredFountains || fountains;
+
+    fountainsToShow.forEach((fountain) => {
       const markerElement = createMarkerElement(fountain);
 
       // Use latitude and longitude directly
@@ -106,10 +110,14 @@ export const Map: React.FC<MapProps> = ({ className = "" }) => {
         .addTo(map.current!);
 
       // Add popup with fountain information
-      const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
+      const popup = new mapboxgl.Popup({ 
+        offset: 25,
+        maxWidth: '280px',
+        className: 'fountain-popup'
+      }).setHTML(`
           <div class="p-3 max-w-xs">
-            <h3 class="font-bold text-lg mb-2">${fountain.name}</h3>
-            <div class="text-sm text-gray-600 mb-2">
+            <h3 class="font-bold text-base sm:text-lg mb-2">${fountain.name}</h3>
+            <div class="text-xs sm:text-sm text-gray-600 mb-2">
               <div class="font-medium">${fountain.building}</div>
               <div>Floor: ${fountain.floor}</div>
               ${
@@ -124,15 +132,15 @@ export const Map: React.FC<MapProps> = ({ className = "" }) => {
                     <img 
                       src="${fountain.image_url}" 
                       alt="${fountain.name}" 
-                      class="w-full h-32 object-cover rounded-lg shadow-sm"
+                      class="w-full h-24 sm:h-32 object-cover rounded-lg shadow-sm"
                       onerror="this.style.display='none'"
                     />
                    </div>`
                 : ""
             }
-            <div class="space-y-1 text-sm mb-3">
+            <div class="space-y-1 text-xs sm:text-sm mb-3">
               <div class="flex items-center">
-                <span class="w-3 h-3 rounded-full mr-2" style="background-color: ${getMarkerColor(
+                <span class="w-2 h-2 sm:w-3 sm:h-3 rounded-full mr-2" style="background-color: ${getMarkerColor(
                   fountain.status
                 )}"></span>
                 <span class="capitalize">${fountain.status.replace(
@@ -151,7 +159,7 @@ export const Map: React.FC<MapProps> = ({ className = "" }) => {
             </div>
             <button 
               onclick="window.navigateToFountain('${fountain.id}')"
-              class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-md transition-colors"
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-3 rounded-md transition-colors touch-manipulation min-h-[44px]"
             >
               View Details
             </button>
@@ -161,7 +169,7 @@ export const Map: React.FC<MapProps> = ({ className = "" }) => {
       marker.setPopup(popup);
       markersRef.current.push(marker);
     });
-  }, [fountains, createMarkerElement]);
+  }, [fountains, filteredFountains, createMarkerElement]);
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
@@ -315,44 +323,47 @@ export const Map: React.FC<MapProps> = ({ className = "" }) => {
 
       {/* Map Controls Overlay */}
       {isLoaded && (
-        <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-3 space-y-2">
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <Navigation className="h-4 w-4" />
-            <span>
+        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-white rounded-lg shadow-lg p-2 sm:p-3 space-y-1 sm:space-y-2">
+          <div className="flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm text-gray-600">
+            <Navigation className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">
               {lng}, {lat}
             </span>
+            <span className="sm:hidden">
+              {lng.toFixed(2)}, {lat.toFixed(2)}
+            </span>
           </div>
-          <div className="text-sm text-gray-600">Zoom: {zoom}</div>
+          <div className="text-xs sm:text-sm text-gray-600">Zoom: {zoom.toFixed(1)}</div>
         </div>
       )}
 
       {/* Legend */}
       {isLoaded && (
-        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-3">
-          <h4 className="font-medium text-sm text-gray-900 mb-2">
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-white rounded-lg shadow-lg p-2 sm:p-3">
+          <h4 className="font-medium text-xs sm:text-sm text-gray-900 mb-1 sm:mb-2">
             Fountain Status
           </h4>
           <div className="space-y-1 text-xs">
             <div className="flex items-center">
               <div
-                className="w-3 h-3 rounded-full mr-2"
+                className="w-2 h-2 sm:w-3 sm:h-3 rounded-full mr-1 sm:mr-2"
                 style={{ backgroundColor: "#10B981" }}
               ></div>
-              <span>Working</span>
+              <span className="text-xs">Working</span>
             </div>
             <div className="flex items-center">
               <div
-                className="w-3 h-3 rounded-full mr-2"
+                className="w-2 h-2 sm:w-3 sm:h-3 rounded-full mr-1 sm:mr-2"
                 style={{ backgroundColor: "#F59E0B" }}
               ></div>
-              <span>Bad Filter</span>
+              <span className="text-xs">Bad Filter</span>
             </div>
             <div className="flex items-center">
               <div
-                className="w-3 h-3 rounded-full mr-2"
+                className="w-2 h-2 sm:w-3 sm:h-3 rounded-full mr-1 sm:mr-2"
                 style={{ backgroundColor: "#EF4444" }}
               ></div>
-              <span>Out of Order</span>
+              <span className="text-xs">Out of Order</span>
             </div>
           </div>
         </div>
@@ -360,13 +371,13 @@ export const Map: React.FC<MapProps> = ({ className = "" }) => {
 
       {/* Style Selector */}
       {isLoaded && (
-        <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-2">
-          <div className="flex space-x-1">
+        <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 bg-white rounded-lg shadow-lg p-1 sm:p-2">
+          <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-1">
             <button
               onClick={() =>
                 handleStyleChange("mapbox://styles/mapbox/streets-v12")
               }
-              className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
+              className="px-2 py-1 sm:px-3 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors touch-manipulation"
             >
               Streets
             </button>
@@ -374,7 +385,7 @@ export const Map: React.FC<MapProps> = ({ className = "" }) => {
               onClick={() =>
                 handleStyleChange("mapbox://styles/mapbox/satellite-v9")
               }
-              className="px-3 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors"
+              className="px-2 py-1 sm:px-3 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors touch-manipulation"
             >
               Satellite
             </button>
@@ -382,7 +393,7 @@ export const Map: React.FC<MapProps> = ({ className = "" }) => {
               onClick={() =>
                 handleStyleChange("mapbox://styles/mapbox/light-v11")
               }
-              className="px-3 py-1 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors"
+              className="px-2 py-1 sm:px-3 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors touch-manipulation"
             >
               Light
             </button>
@@ -390,7 +401,7 @@ export const Map: React.FC<MapProps> = ({ className = "" }) => {
               onClick={() =>
                 handleStyleChange("mapbox://styles/mapbox/dark-v11")
               }
-              className="px-3 py-1 text-xs bg-gray-800 text-gray-200 rounded hover:bg-gray-700 transition-colors"
+              className="px-2 py-1 sm:px-3 text-xs bg-gray-800 text-gray-200 rounded hover:bg-gray-700 transition-colors touch-manipulation"
             >
               Dark
             </button>

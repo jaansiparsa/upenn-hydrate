@@ -5,7 +5,12 @@ import {
   User,
   UserMinus,
   UserPlus,
+  Users,
+  UserCheck,
   X,
+  Eye,
+  Camera,
+  Upload,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -28,6 +33,7 @@ export const UserProfile: React.FC = () => {
     badges: string[];
     followers: string[];
     following: string[];
+    profile_photo_url?: string;
   } | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,12 +44,79 @@ export const UserProfile: React.FC = () => {
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
+  const [followersList, setFollowersList] = useState<Array<{id: string, display_name?: string, email?: string}>>([]);
+  const [followingList, setFollowingList] = useState<Array<{id: string, display_name?: string, email?: string}>>([]);
+  const [loadingLists, setLoadingLists] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   // Handle vote updates
   const handleVote = (updatedReview: Review) => {
     setReviews(prev => 
       prev.map(review => review.id === updatedReview.id ? updatedReview : review)
     );
+  };
+
+  // Fetch followers list
+  const fetchFollowersList = async () => {
+    if (!profile?.followers?.length) {
+      setFollowersList([]);
+      return;
+    }
+
+    try {
+      setLoadingLists(true);
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, display_name, email")
+        .in("id", profile.followers);
+
+      if (error) throw error;
+      setFollowersList(data || []);
+    } catch (error) {
+      console.error("Error fetching followers list:", error);
+      setFollowersList([]);
+    } finally {
+      setLoadingLists(false);
+    }
+  };
+
+  // Fetch following list
+  const fetchFollowingList = async () => {
+    if (!profile?.following?.length) {
+      setFollowingList([]);
+      return;
+    }
+
+    try {
+      setLoadingLists(true);
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, display_name, email")
+        .in("id", profile.following);
+
+      if (error) throw error;
+      setFollowingList(data || []);
+    } catch (error) {
+      console.error("Error fetching following list:", error);
+      setFollowingList([]);
+    } finally {
+      setLoadingLists(false);
+    }
+  };
+
+  // Handle opening followers modal
+  const handleShowFollowers = async () => {
+    setShowFollowersModal(true);
+    await fetchFollowersList();
+  };
+
+  // Handle opening following modal
+  const handleShowFollowing = async () => {
+    setShowFollowingModal(true);
+    await fetchFollowingList();
   };
 
   const isOwnProfile = currentUser?.id === id;
@@ -271,6 +344,17 @@ export const UserProfile: React.FC = () => {
             : null
         );
       }
+
+      // Refresh the profile data to get accurate counts
+      const { data: updatedProfile, error: refreshError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (!refreshError && updatedProfile) {
+        setProfile(updatedProfile);
+      }
     } catch (error) {
       console.error("Error updating follow status:", error);
       setError("Failed to update follow status");
@@ -412,7 +496,27 @@ export const UserProfile: React.FC = () => {
                   )}
                 </div>
               )}
-              <p className="text-gray-600 mt-1">{profile.email}</p>
+              <div className="flex items-center space-x-4 mt-1">
+                <p className="text-gray-600">{profile.email}</p>
+                <div className="flex items-center space-x-3 text-sm">
+                  <button
+                    onClick={handleShowFollowers}
+                    className="flex items-center space-x-1 text-green-600 hover:text-green-700 transition-colors"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span className="font-medium">{profile.followers?.length || 0}</span>
+                    <span className="text-gray-500">followers</span>
+                  </button>
+                  <button
+                    onClick={handleShowFollowing}
+                    className="flex items-center space-x-1 text-purple-600 hover:text-purple-700 transition-colors"
+                  >
+                    <UserCheck className="w-4 h-4" />
+                    <span className="font-medium">{profile.following?.length || 0}</span>
+                    <span className="text-gray-500">following</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -451,21 +555,39 @@ export const UserProfile: React.FC = () => {
           )}
         </div>
 
+
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="text-center bg-blue-50 rounded-lg p-4">
+            <div className="flex items-center justify-center mb-2">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                <span className="text-blue-600 text-sm">📝</span>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}
             </div>
-            <div className="text-sm text-gray-600">Total Reviews</div>
+            <div className="text-sm text-gray-600">Reviews</div>
           </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-yellow-600">
+          
+          <div className="text-center bg-yellow-50 rounded-lg p-4">
+            <div className="flex items-center justify-center mb-2">
+              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-2">
+                <span className="text-yellow-600 text-sm">⭐</span>
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-yellow-600">
               {averageRating > 0 ? averageRating.toFixed(1) : "N/A"}
             </div>
-            <div className="text-sm text-gray-600">Average Rating</div>
+            <div className="text-sm text-gray-600">Avg Rating</div>
           </div>
-          <div className="text-center">
+          
+          <div className="text-center bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center justify-center mb-2">
+              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-2">
+                <span className="text-gray-600 text-sm">🏆</span>
+              </div>
+            </div>
             <div className="text-sm text-gray-600">Badges</div>
             <div className="text-xs text-gray-500 mt-1">
               {getBadgeDisplay(profile.badges)}
@@ -533,6 +655,128 @@ export const UserProfile: React.FC = () => {
       {error && (
         <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-3">
           <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
+
+      {/* Followers Modal */}
+      {showFollowersModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-96 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Users className="w-5 h-5 mr-2 text-green-600" />
+                Followers ({profile.followers?.length || 0})
+              </h3>
+              <button
+                onClick={() => setShowFollowersModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-80">
+              {loadingLists ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+                  <span className="ml-2 text-gray-600">Loading...</span>
+                </div>
+              ) : followersList.length > 0 ? (
+                <div className="space-y-3">
+                  {followersList.map((follower) => (
+                    <div
+                      key={follower.id}
+                      className="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log("Navigating to follower profile:", follower.id);
+                        setShowFollowersModal(false);
+                        navigate(`/user/${follower.id}`);
+                      }}
+                    >
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                        <User className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 hover:text-green-700 transition-colors">
+                          {follower.display_name || "Unknown User"}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {follower.email}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No followers yet</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Following Modal */}
+      {showFollowingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-96 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <UserCheck className="w-5 h-5 mr-2 text-purple-600" />
+                Following ({profile.following?.length || 0})
+              </h3>
+              <button
+                onClick={() => setShowFollowingModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-80">
+              {loadingLists ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                  <span className="ml-2 text-gray-600">Loading...</span>
+                </div>
+              ) : followingList.length > 0 ? (
+                <div className="space-y-3">
+                  {followingList.map((following) => (
+                    <div
+                      key={following.id}
+                      className="flex items-center p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log("Navigating to following profile:", following.id);
+                        setShowFollowingModal(false);
+                        navigate(`/user/${following.id}`);
+                      }}
+                    >
+                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                        <User className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 hover:text-purple-700 transition-colors">
+                          {following.display_name || "Unknown User"}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {following.email}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <UserCheck className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">Not following anyone yet</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

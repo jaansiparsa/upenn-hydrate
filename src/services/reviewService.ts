@@ -10,8 +10,6 @@ export interface Review {
   yum_factor: number;
   comment?: string;
   created_at?: string;
-  upvotes?: string[];
-  downvotes?: string[];
   users?: {
     display_name?: string;
     email?: string;
@@ -132,7 +130,7 @@ export const createReview = async (
   }
 
   // First, ensure the user exists in the users table
-  const { error: userError } = await supabase
+  const { data: userData, error: userError } = await supabase
     .from("users")
     .select("id")
     .eq("id", user.id)
@@ -226,104 +224,6 @@ export const deleteReview = async (reviewId: string): Promise<void> => {
   }
 };
 
-// Vote on a review
-export const voteOnReview = async (
-  reviewId: string,
-  voteType: "upvote" | "downvote" | "remove"
-): Promise<Review> => {
-  console.log("voteOnReview called:", { reviewId, voteType });
-  
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  console.log("Current user:", user?.id);
-
-  if (!user) {
-    throw new Error("User must be authenticated to vote");
-  }
-
-  // First, get the current review to check existing votes
-  console.log("Fetching current review data...");
-  const { data: currentReview, error: fetchError } = await supabase
-    .from("ratings")
-    .select("upvotes, downvotes")
-    .eq("id", reviewId)
-    .single();
-
-  console.log("Current review data:", { currentReview, fetchError });
-
-  if (fetchError) {
-    console.error("Error fetching review:", fetchError);
-    throw fetchError;
-  }
-
-  const currentUpvotes = currentReview?.upvotes || [];
-  const currentDownvotes = currentReview?.downvotes || [];
-  const userId = user.id;
-
-  let newUpvotes = [...currentUpvotes];
-  let newDownvotes = [...currentDownvotes];
-
-  // Remove user from both arrays first (in case they're switching vote types)
-  newUpvotes = newUpvotes.filter(id => id !== userId);
-  newDownvotes = newDownvotes.filter(id => id !== userId);
-
-  // Add user to the appropriate array based on vote type
-  if (voteType === "upvote") {
-    newUpvotes.push(userId);
-  } else if (voteType === "downvote") {
-    newDownvotes.push(userId);
-  }
-  // If voteType is "remove", we just leave both arrays without the user
-
-  // Update the review with new vote arrays
-  console.log("Updating review with votes:", { 
-    reviewId, 
-    newUpvotes, 
-    newDownvotes, 
-    userId 
-  });
-  
-  const { data, error } = await supabase
-    .from("ratings")
-    .update({
-      upvotes: newUpvotes,
-      downvotes: newDownvotes,
-    })
-    .eq("id", reviewId)
-    .select(
-      `
-      *,
-      users:user_id (
-        display_name,
-        email,
-        profile_picture_url
-      )
-    `
-    )
-    .single();
-
-  console.log("Update result:", { data, error });
-
-  if (error) {
-    console.error("Error updating review:", error);
-    throw error;
-  }
-
-  return data as Review;
-};
-
-// Get user's vote status for a review
-export const getUserVoteStatus = (
-  review: Review,
-  userId: string
-): "upvoted" | "downvoted" | "none" => {
-  if (review.upvotes?.includes(userId)) return "upvoted";
-  if (review.downvotes?.includes(userId)) return "downvoted";
-  return "none";
-};
-
 // Subscribe to real-time updates for reviews
 export const subscribeToReviews = (
   fountainId: string,
@@ -342,4 +242,173 @@ export const subscribeToReviews = (
       callback
     )
     .subscribe();
+};
+
+// Voting functions
+export const upvoteRating = async (ratingId: string): Promise<void> => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("User must be authenticated to vote");
+  }
+
+  // Get current rating to check existing votes
+  const { data: rating, error: fetchError } = await supabase
+    .from("ratings")
+    .select("upvotes, downvotes")
+    .eq("id", ratingId)
+    .single();
+
+  if (fetchError) {
+    console.error("Error fetching rating:", fetchError);
+    throw new Error("Failed to fetch rating");
+  }
+
+  const currentUpvotes = rating.upvotes || [];
+  const currentDownvotes = rating.downvotes || [];
+
+  // Remove user from downvotes if they were there
+  const newDownvotes = currentDownvotes.filter((id: string) => id !== user.id);
+
+  // Add user to upvotes if not already there
+  const newUpvotes = currentUpvotes.includes(user.id)
+    ? currentUpvotes.filter((id: string) => id !== user.id) // Remove if already upvoted
+    : [...currentUpvotes, user.id]; // Add if not upvoted
+
+  const { error } = await supabase
+    .from("ratings")
+    .update({
+      upvotes: newUpvotes,
+      downvotes: newDownvotes,
+    })
+    .eq("id", ratingId);
+
+  if (error) {
+    console.error("Error upvoting rating:", error);
+    throw new Error("Failed to upvote rating");
+  }
+};
+
+export const downvoteRating = async (ratingId: string): Promise<void> => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("User must be authenticated to vote");
+  }
+
+  // Get current rating to check existing votes
+  const { data: rating, error: fetchError } = await supabase
+    .from("ratings")
+    .select("upvotes, downvotes")
+    .eq("id", ratingId)
+    .single();
+
+  if (fetchError) {
+    console.error("Error fetching rating:", fetchError);
+    throw new Error("Failed to fetch rating");
+  }
+
+  const currentUpvotes = rating.upvotes || [];
+  const currentDownvotes = rating.downvotes || [];
+
+  // Remove user from upvotes if they were there
+  const newUpvotes = currentUpvotes.filter((id: string) => id !== user.id);
+
+  // Add user to downvotes if not already there
+  const newDownvotes = currentDownvotes.includes(user.id)
+    ? currentDownvotes.filter((id: string) => id !== user.id) // Remove if already downvoted
+    : [...currentDownvotes, user.id]; // Add if not downvoted
+
+  const { error } = await supabase
+    .from("ratings")
+    .update({
+      upvotes: newUpvotes,
+      downvotes: newDownvotes,
+    })
+    .eq("id", ratingId);
+
+  if (error) {
+    console.error("Error downvoting rating:", error);
+    throw new Error("Failed to downvote rating");
+  }
+};
+
+export const removeVote = async (ratingId: string): Promise<void> => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("User must be authenticated to vote");
+  }
+
+  // Get current rating to check existing votes
+  const { data: rating, error: fetchError } = await supabase
+    .from("ratings")
+    .select("upvotes, downvotes")
+    .eq("id", ratingId)
+    .single();
+
+  if (fetchError) {
+    console.error("Error fetching rating:", fetchError);
+    throw new Error("Failed to fetch rating");
+  }
+
+  const currentUpvotes = rating.upvotes || [];
+  const currentDownvotes = rating.downvotes || [];
+
+  // Remove user from both upvotes and downvotes
+  const newUpvotes = currentUpvotes.filter((id: string) => id !== user.id);
+  const newDownvotes = currentDownvotes.filter((id: string) => id !== user.id);
+
+  const { error } = await supabase
+    .from("ratings")
+    .update({
+      upvotes: newUpvotes,
+      downvotes: newDownvotes,
+    })
+    .eq("id", ratingId);
+
+  if (error) {
+    console.error("Error removing vote:", error);
+    throw new Error("Failed to remove vote");
+  }
+};
+
+export const getUserVoteStatus = async (
+  ratingId: string
+): Promise<"upvoted" | "downvoted" | "none"> => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return "none";
+  }
+
+  const { data: rating, error } = await supabase
+    .from("ratings")
+    .select("upvotes, downvotes")
+    .eq("id", ratingId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching rating:", error);
+    return "none";
+  }
+
+  const upvotes = rating.upvotes || [];
+  const downvotes = rating.downvotes || [];
+
+  if (upvotes.includes(user.id)) {
+    return "upvoted";
+  } else if (downvotes.includes(user.id)) {
+    return "downvoted";
+  } else {
+    return "none";
+  }
 };

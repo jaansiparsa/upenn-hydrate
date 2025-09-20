@@ -1,7 +1,11 @@
-import { Calendar, Star, User } from "lucide-react";
+import { Calendar, MessageCircle, Star, User, ChevronDown } from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
 
-import React from "react";
+import { CommentCard } from "./CommentCard";
+import { CommentForm } from "./CommentForm";
+import type { RatingComment } from "../services/commentService";
 import type { Review } from "../services/reviewService";
+import { getRatingComments } from "../services/commentService";
 
 interface ReviewCardProps {
   review: Review;
@@ -10,9 +14,16 @@ interface ReviewCardProps {
     email?: string;
     profile_picture_url?: string;
   };
+  showComments?: boolean;
 }
 
-export const ReviewCard: React.FC<ReviewCardProps> = ({ review, user }) => {
+export const ReviewCard: React.FC<ReviewCardProps> = ({
+  review,
+  user,
+  showComments = false,
+}) => {
+  const [comments, setComments] = useState<RatingComment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Unknown date";
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -37,6 +48,41 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, user }) => {
     if (user?.display_name) return user.display_name;
     if (user?.email) return user.email.split("@")[0];
     return "Anonymous User";
+  };
+
+  const loadComments = useCallback(async () => {
+    setLoadingComments(true);
+    try {
+      const fetchedComments = await getRatingComments(review.id);
+      setComments(fetchedComments);
+    } catch (error) {
+      console.error("Error loading comments:", error);
+    } finally {
+      setLoadingComments(false);
+    }
+  }, [review.id]);
+
+  // Load comments when comments section is shown
+  useEffect(() => {
+    if (showComments && comments.length === 0) {
+      loadComments();
+    }
+  }, [showComments, comments.length, loadComments]);
+
+  const handleCommentCreated = (newComment: RatingComment) => {
+    setComments((prev) => [...prev, newComment]);
+  };
+
+  const handleCommentUpdate = (updatedComment: RatingComment) => {
+    setComments((prev) =>
+      prev.map((comment) =>
+        comment.id === updatedComment.id ? updatedComment : comment
+      )
+    );
+  };
+
+  const handleCommentDelete = (commentId: string) => {
+    setComments((prev) => prev.filter((comment) => comment.id !== commentId));
   };
 
   return (
@@ -100,6 +146,65 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, user }) => {
           <p className="text-sm text-gray-700 leading-relaxed">
             "{review.comment}"
           </p>
+        </div>
+      )}
+
+      {/* Comments Section */}
+      {showComments && (
+        <div className="border-t border-gray-100 pt-4 mt-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <h3 className="text-lg font-semibold text-gray-900">Comments</h3>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                {comments.length}
+              </span>
+            </div>
+            
+            <div className="relative">
+              <select className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-1.5 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <option>Most recent</option>
+                <option>Oldest first</option>
+                <option>Most liked</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Comment Form */}
+            <CommentForm
+              ratingId={review.id}
+              onCommentCreated={handleCommentCreated}
+            />
+
+            {/* Comments List */}
+            {loadingComments ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                <span className="ml-2 text-gray-600">
+                  Loading comments...
+                </span>
+              </div>
+            ) : comments.length > 0 ? (
+              <div className="space-y-1">
+                {comments.map((comment) => (
+                  <CommentCard
+                    key={comment.id}
+                    comment={comment}
+                    onCommentUpdate={handleCommentUpdate}
+                    onCommentDelete={handleCommentDelete}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <MessageCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p>No comments yet. Be the first to comment!</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

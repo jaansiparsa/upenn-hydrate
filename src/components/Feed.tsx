@@ -1,8 +1,10 @@
+import { Globe, RefreshCw, Rss, UserCheck } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
+import type { RatingComment } from "../services/commentService";
 import type { Review } from "../services/reviewService";
 import { ReviewItem } from "./ReviewItem";
-import { Rss, UserCheck, Globe, RefreshCw } from "lucide-react";
+import { getRatingComments } from "../services/commentService";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -17,15 +19,89 @@ export const Feed: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>("all");
   const [followingUsers, setFollowingUsers] = useState<string[]>([]);
   const [loadingFollowing, setLoadingFollowing] = useState(false);
+  const [commentsMap, setCommentsMap] = useState<
+    Record<string, RatingComment[]>
+  >({});
+  const [loadingComments, setLoadingComments] = useState(false);
+
+  // Load comments for all reviews
+  const loadCommentsForReviews = async (reviewsToLoad: Review[]) => {
+    if (reviewsToLoad.length === 0) return;
+
+    setLoadingComments(true);
+    try {
+      const commentsPromises = reviewsToLoad.map(async (review) => {
+        try {
+          const comments = await getRatingComments(review.id);
+          return { reviewId: review.id, comments };
+        } catch (error) {
+          console.error(
+            `Error loading comments for review ${review.id}:`,
+            error
+          );
+          return { reviewId: review.id, comments: [] };
+        }
+      });
+
+      const commentsResults = await Promise.all(commentsPromises);
+
+      const newCommentsMap: Record<string, RatingComment[]> = {};
+      commentsResults.forEach(({ reviewId, comments }) => {
+        newCommentsMap[reviewId] = comments;
+      });
+
+      setCommentsMap((prev) => ({ ...prev, ...newCommentsMap }));
+    } catch (error) {
+      console.error("Error loading comments:", error);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  // Handle comment updates
+  const handleCommentUpdate = (
+    reviewId: string,
+    updatedComment: RatingComment
+  ) => {
+    setCommentsMap((prev) => ({
+      ...prev,
+      [reviewId]:
+        prev[reviewId]?.map((comment) =>
+          comment.id === updatedComment.id ? updatedComment : comment
+        ) || [],
+    }));
+  };
+
+  const handleCommentCreated = (
+    reviewId: string,
+    newComment: RatingComment
+  ) => {
+    setCommentsMap((prev) => ({
+      ...prev,
+      [reviewId]: [...(prev[reviewId] || []), newComment],
+    }));
+  };
+
+  const handleCommentDelete = (reviewId: string, commentId: string) => {
+    setCommentsMap((prev) => ({
+      ...prev,
+      [reviewId]:
+        prev[reviewId]?.filter((comment) => comment.id !== commentId) || [],
+    }));
+  };
 
   // Handle vote updates
   const handleVote = (updatedReview: Review) => {
     // Update the review in both allReviews and filtered reviews
-    setAllReviews(prev => 
-      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    setAllReviews((prev) =>
+      prev.map((review) =>
+        review.id === updatedReview.id ? updatedReview : review
+      )
     );
-    setReviews(prev => 
-      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    setReviews((prev) =>
+      prev.map((review) =>
+        review.id === updatedReview.id ? updatedReview : review
+      )
     );
   };
 
@@ -55,7 +131,9 @@ export const Feed: React.FC = () => {
   const filterReviews = (reviews: Review[], filterType: FilterType) => {
     switch (filterType) {
       case "following":
-        return reviews.filter(review => followingUsers.includes(review.user_id));
+        return reviews.filter((review) =>
+          followingUsers.includes(review.user_id)
+        );
       case "all":
       default:
         return reviews;
@@ -86,11 +164,17 @@ export const Feed: React.FC = () => {
         )
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
 
       const reviewsData = data as Review[];
       setAllReviews(reviewsData);
       setReviews(filterReviews(reviewsData, filter));
+
+      // Load comments for all reviews
+      loadCommentsForReviews(reviewsData);
     } catch (error) {
       console.error("Error fetching reviews:", error);
       setError("Failed to load reviews");
@@ -178,10 +262,11 @@ export const Feed: React.FC = () => {
         </div>
         <div className="flex items-center space-x-4">
           <span className="text-sm text-gray-600">
-            {filter === "all" 
+            {filter === "all"
               ? `${reviews.length} review${reviews.length !== 1 ? "s" : ""}`
-              : `${reviews.length} of ${allReviews.length} review${allReviews.length !== 1 ? "s" : ""}`
-            }
+              : `${reviews.length} of ${allReviews.length} review${
+                  allReviews.length !== 1 ? "s" : ""
+                }`}
           </span>
           <button
             onClick={refreshFeed}
@@ -189,7 +274,7 @@ export const Feed: React.FC = () => {
             className="inline-flex items-center px-2 py-1 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
             title="Refresh feed"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
       </div>
@@ -208,7 +293,7 @@ export const Feed: React.FC = () => {
             <Globe className="h-4 w-4 mr-2" />
             All Reviews
           </button>
-          
+
           {user && (
             <button
               onClick={() => setFilter("following")}
@@ -227,12 +312,16 @@ export const Feed: React.FC = () => {
             </button>
           )}
         </div>
-        
+
         {/* Filter Description */}
         <div className="mt-2 text-xs text-gray-500">
           {filter === "all" && "Showing all reviews from all users"}
-          {filter === "following" && user && `Showing reviews from ${followingUsers.length} users you follow`}
-          {filter === "following" && !user && "Please sign in to see reviews from users you follow"}
+          {filter === "following" &&
+            user &&
+            `Showing reviews from ${followingUsers.length} users you follow`}
+          {filter === "following" &&
+            !user &&
+            "Please sign in to see reviews from users you follow"}
         </div>
       </div>
 
@@ -244,6 +333,17 @@ export const Feed: React.FC = () => {
               review={review}
               showFountainInfo={true}
               onVote={handleVote}
+              showComments={true}
+              comments={commentsMap[review.id] || []}
+              onCommentUpdate={(comment) =>
+                handleCommentUpdate(review.id, comment)
+              }
+              onCommentCreated={(comment) =>
+                handleCommentCreated(review.id, comment)
+              }
+              onCommentDelete={(commentId) =>
+                handleCommentDelete(review.id, commentId)
+              }
             />
           ))}
         </div>

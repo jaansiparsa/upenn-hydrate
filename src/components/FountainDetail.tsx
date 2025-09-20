@@ -1,4 +1,13 @@
-import { ArrowLeft, Building, Layers, MapPin, Upload, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Building,
+  Coffee,
+  Droplets,
+  Layers,
+  MapPin,
+  Upload,
+  X,
+} from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { getFountain, updateFountain } from "../services/fountainService";
 import { useNavigate, useParams } from "react-router-dom";
@@ -7,11 +16,14 @@ import type { Fountain } from "../services/fountainService";
 import type { Review } from "../services/reviewService";
 import { ReviewForm } from "./ReviewForm";
 import { ReviewItem } from "./ReviewItem";
+import { drinksService } from "../services/drinksService";
 import { getFountainReviews } from "../services/reviewService";
+import { useAuth } from "../contexts/AuthContext";
 
 export const FountainDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [fountain, setFountain] = useState<Fountain | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,11 +32,14 @@ export const FountainDetail: React.FC = () => {
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [drinkLogging, setDrinkLogging] = useState(false);
 
   // Handle vote updates
   const handleVote = (updatedReview: Review) => {
-    setReviews(prev => 
-      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    setReviews((prev) =>
+      prev.map((review) =>
+        review.id === updatedReview.id ? updatedReview : review
+      )
     );
   };
 
@@ -100,6 +115,43 @@ export const FountainDetail: React.FC = () => {
       alert("Failed to update fountain status. Please try again.");
     } finally {
       setStatusUpdateLoading(false);
+    }
+  };
+
+  const handleDrinkLog = async (amountMl: number, drinkType: string) => {
+    if (!user || !fountain) {
+      alert("Please log in to track your drinks!");
+      return;
+    }
+
+    setDrinkLogging(true);
+    try {
+      console.log("Logging drink:", {
+        fountain_id: fountain.id,
+        amount_ml: amountMl,
+        notes: drinkType,
+        duration_seconds: drinkType === "1 second sip" ? 1 : undefined,
+      });
+
+      await drinksService.createDrink({
+        fountain_id: fountain.id,
+        amount_ml: amountMl,
+        notes: drinkType,
+        duration_seconds: drinkType === "1 second sip" ? 1 : undefined,
+      });
+
+      // Show success message
+      alert(`Successfully logged ${drinkType}!`);
+    } catch (error) {
+      console.error("Error logging drink:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
+
+      // Show more detailed error message
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error occurred";
+      alert(`Failed to log drink: ${errorMessage}`);
+    } finally {
+      setDrinkLogging(false);
     }
   };
 
@@ -358,6 +410,43 @@ export const FountainDetail: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Drink Tracking */}
+                  {user && (
+                    <div className="mb-4">
+                      <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                        <Droplets className="h-4 w-4 mr-1" />
+                        Track Your Hydration
+                      </h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => handleDrinkLog(30, "1 second sip")} // 1 oz = ~30ml
+                          disabled={drinkLogging}
+                          className="inline-flex items-center justify-center px-3 py-2 border border-blue-300 text-xs font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                        >
+                          <Droplets className="h-3 w-3 mr-1" />1 Second Sip
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleDrinkLog(710, "filled my bottle")
+                          } // 24 oz = ~710ml
+                          disabled={drinkLogging}
+                          className="inline-flex items-center justify-center px-3 py-2 border border-green-300 text-xs font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                        >
+                          <Coffee className="h-3 w-3 mr-1" />
+                          Filled My Bottle
+                        </button>
+                      </div>
+                      {drinkLogging && (
+                        <div className="mt-2 text-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mx-auto"></div>
+                          <p className="text-xs text-gray-600 mt-1">
+                            Logging drink...
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="space-y-2">
                     <button
@@ -422,6 +511,7 @@ export const FountainDetail: React.FC = () => {
                     review={review}
                     showFountainInfo={false}
                     onVote={handleVote}
+                    showComments={true}
                   />
                 ))}
               </div>

@@ -1,29 +1,30 @@
 import {
   ArrowLeft,
+  Camera,
+  Check,
   Edit3,
+  RotateCcw,
   Save,
+  Upload,
   User,
+  UserCheck,
   UserMinus,
   UserPlus,
   Users,
-  UserCheck,
   X,
-  Camera,
-  Upload,
-  RotateCcw,
-  Check,
 } from "lucide-react";
+import { BadgeNotification, useBadgeNotifications } from "./BadgeNotification";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { BadgeDisplay } from "./BadgeDisplay";
 import type { Review } from "../services/reviewService";
+import { ReviewItem } from "./ReviewItem";
+import { checkAndAwardBadges } from "../services/badgeService";
+import { drinksService } from "../services/drinksService";
 import { getUserReviews } from "../services/reviewService";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
-import { ReviewItem } from "./ReviewItem";
-import { BadgeDisplay } from "./BadgeDisplay";
-import { BadgeNotification, useBadgeNotifications } from "./BadgeNotification";
-import { checkAndAwardBadges } from "../services/badgeService";
 
 export const UserProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -50,8 +51,22 @@ export const UserProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
-  const [followersList, setFollowersList] = useState<Array<{id: string, display_name?: string, email?: string, profile_picture_url?: string}>>([]);
-  const [followingList, setFollowingList] = useState<Array<{id: string, display_name?: string, email?: string, profile_picture_url?: string}>>([]);
+  const [followersList, setFollowersList] = useState<
+    Array<{
+      id: string;
+      display_name?: string;
+      email?: string;
+      profile_picture_url?: string;
+    }>
+  >([]);
+  const [followingList, setFollowingList] = useState<
+    Array<{
+      id: string;
+      display_name?: string;
+      email?: string;
+      profile_picture_url?: string;
+    }>
+  >([]);
   const [loadingLists, setLoadingLists] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -59,12 +74,21 @@ export const UserProfile: React.FC = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-  const { notifications, showBadgeEarned, removeNotification } = useBadgeNotifications();
+  const { notifications, showBadgeEarned, removeNotification } =
+    useBadgeNotifications();
+  const [consumptionData, setConsumptionData] = useState<{
+    total_ml: number;
+    total_oz: number;
+    total_drinks: number;
+    bottles_saved: number;
+  } | null>(null);
 
   // Handle vote updates
   const handleVote = (updatedReview: Review) => {
-    setReviews(prev => 
-      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    setReviews((prev) =>
+      prev.map((review) =>
+        review.id === updatedReview.id ? updatedReview : review
+      )
     );
   };
 
@@ -129,29 +153,34 @@ export const UserProfile: React.FC = () => {
   };
 
   // Handle photo upload
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file || !profile) {
-      console.error('No file or profile found:', { file: !!file, profile: !!profile });
+      console.error("No file or profile found:", {
+        file: !!file,
+        profile: !!profile,
+      });
       return;
     }
 
-    console.log('Starting photo upload:', { 
-      fileName: file.name, 
-      fileSize: file.size, 
+    console.log("Starting photo upload:", {
+      fileName: file.name,
+      fileSize: file.size,
       fileType: file.type,
-      profileId: profile.id 
+      profileId: profile.id,
     });
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file");
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be smaller than 5MB');
+      setError("Image must be smaller than 5MB");
       return;
     }
 
@@ -159,10 +188,14 @@ export const UserProfile: React.FC = () => {
       setUploadingPhoto(true);
       setError(null);
 
-      console.log('=== PROFILE PICTURE UPLOAD DEBUG ===');
-      console.log('Current user:', currentUser?.id);
-      console.log('Profile ID:', profile.id);
-      console.log('File details:', { name: file.name, size: file.size, type: file.type });
+      console.log("=== PROFILE PICTURE UPLOAD DEBUG ===");
+      console.log("Current user:", currentUser?.id);
+      console.log("Profile ID:", profile.id);
+      console.log("File details:", {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
 
       // Check if storage bucket exists
       await ensureStorageBucket();
@@ -175,64 +208,72 @@ export const UserProfile: React.FC = () => {
       reader.readAsDataURL(file);
 
       // Upload to Supabase Storage
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split(".").pop();
       const fileName = `${profile.id}.${fileExt}`;
       const filePath = `${profile.id}/${fileName}`;
 
-      console.log('Uploading to storage:', { filePath, bucket: 'profile-pictures' });
+      console.log("Uploading to storage:", {
+        filePath,
+        bucket: "profile-pictures",
+      });
 
       const { error: uploadError } = await supabase.storage
-        .from('profile-pictures')
+        .from("profile-pictures")
         .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
+          cacheControl: "3600",
+          upsert: true,
         });
 
       if (uploadError) {
-        console.error('Storage upload error:', uploadError);
-        console.error('Upload error details:', {
+        console.error("Storage upload error:", uploadError);
+        console.error("Upload error details:", {
           message: uploadError.message,
-          name: uploadError.name
+          name: uploadError.name,
         });
         throw new Error(`Storage error: ${uploadError.message}`);
       }
 
-      console.log('Storage upload successful');
+      console.log("Storage upload successful");
 
       // Get public URL
       const { data } = supabase.storage
-        .from('profile-pictures')
+        .from("profile-pictures")
         .getPublicUrl(filePath);
 
-      console.log('Got public URL:', data.publicUrl);
+      console.log("Got public URL:", data.publicUrl);
 
       // Update user profile with photo URL
-      console.log('Updating user profile with photo URL...');
+      console.log("Updating user profile with photo URL...");
       const { error: updateError } = await supabase
-        .from('users')
+        .from("users")
         .update({ profile_picture_url: data.publicUrl })
-        .eq('id', profile.id);
+        .eq("id", profile.id);
 
       if (updateError) {
-        console.error('Database update error:', updateError);
-        console.error('Database error details:', {
+        console.error("Database update error:", updateError);
+        console.error("Database error details:", {
           message: updateError.message,
           code: updateError.code,
           details: updateError.details,
-          hint: updateError.hint
+          hint: updateError.hint,
         });
         throw new Error(`Database error: ${updateError.message}`);
       }
 
-      console.log('Profile update successful');
+      console.log("Profile update successful");
 
       // Update local state
-      setProfile(prev => prev ? { ...prev, profile_picture_url: data.publicUrl } : null);
+      setProfile((prev) =>
+        prev ? { ...prev, profile_picture_url: data.publicUrl } : null
+      );
       setPhotoPreview(null);
-
     } catch (error) {
-      console.error('Error uploading photo:', error);
-      setError(`Failed to upload photo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Error uploading photo:", error);
+      setError(
+        `Failed to upload photo: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     } finally {
       setUploadingPhoto(false);
     }
@@ -247,27 +288,26 @@ export const UserProfile: React.FC = () => {
       setError(null);
 
       // Remove from storage
-      const fileName = profile.profile_picture_url.split('/').pop();
+      const fileName = profile.profile_picture_url.split("/").pop();
       const filePath = `${profile.id}/${fileName}`;
 
-      await supabase.storage
-        .from('profile-pictures')
-        .remove([filePath]);
+      await supabase.storage.from("profile-pictures").remove([filePath]);
 
       // Update user profile
       const { error: updateError } = await supabase
-        .from('users')
+        .from("users")
         .update({ profile_picture_url: null })
-        .eq('id', profile.id);
+        .eq("id", profile.id);
 
       if (updateError) throw updateError;
 
       // Update local state
-      setProfile(prev => prev ? { ...prev, profile_picture_url: undefined } : null);
-
+      setProfile((prev) =>
+        prev ? { ...prev, profile_picture_url: undefined } : null
+      );
     } catch (error) {
-      console.error('Error removing photo:', error);
-      setError('Failed to remove photo');
+      console.error("Error removing photo:", error);
+      setError("Failed to remove photo");
     } finally {
       setUploadingPhoto(false);
     }
@@ -278,23 +318,23 @@ export const UserProfile: React.FC = () => {
     try {
       setError(null);
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'user',
+        video: {
+          facingMode: "user",
           width: { ideal: 640 },
-          height: { ideal: 640 }
-        }
+          height: { ideal: 640 },
+        },
       });
       setStream(mediaStream);
       setShowCamera(true);
     } catch (error) {
-      console.error('Error accessing camera:', error);
-      setError('Unable to access camera. Please check permissions.');
+      console.error("Error accessing camera:", error);
+      setError("Unable to access camera. Please check permissions.");
     }
   };
 
   const stopCamera = () => {
     if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
       setStream(null);
     }
     setShowCamera(false);
@@ -303,30 +343,30 @@ export const UserProfile: React.FC = () => {
 
   const capturePhoto = () => {
     if (!videoRef) {
-      console.error('Video ref not available for photo capture');
+      console.error("Video ref not available for photo capture");
       return;
     }
 
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
     if (!context) {
-      console.error('Canvas context not available for photo capture');
+      console.error("Canvas context not available for photo capture");
       return;
     }
 
     canvas.width = videoRef.videoWidth;
     canvas.height = videoRef.videoHeight;
-    
+
     context.drawImage(videoRef, 0, 0);
-    const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-    
-    console.log('Photo captured successfully:', {
+    const photoDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+
+    console.log("Photo captured successfully:", {
       canvasWidth: canvas.width,
       canvasHeight: canvas.height,
-      dataUrlLength: photoDataUrl.length
+      dataUrlLength: photoDataUrl.length,
     });
-    
+
     setCapturedPhoto(photoDataUrl);
   };
 
@@ -336,9 +376,9 @@ export const UserProfile: React.FC = () => {
 
   const useCapturedPhoto = async () => {
     if (!capturedPhoto || !profile) {
-      console.error('No captured photo or profile found:', { 
-        capturedPhoto: !!capturedPhoto, 
-        profile: !!profile 
+      console.error("No captured photo or profile found:", {
+        capturedPhoto: !!capturedPhoto,
+        profile: !!profile,
       });
       return;
     }
@@ -347,10 +387,10 @@ export const UserProfile: React.FC = () => {
       setUploadingPhoto(true);
       setError(null);
 
-      console.log('=== CAMERA CAPTURE UPLOAD DEBUG ===');
-      console.log('Current user:', currentUser?.id);
-      console.log('Profile ID:', profile.id);
-      console.log('Processing captured photo for profile:', profile.id);
+      console.log("=== CAMERA CAPTURE UPLOAD DEBUG ===");
+      console.log("Current user:", currentUser?.id);
+      console.log("Profile ID:", profile.id);
+      console.log("Processing captured photo for profile:", profile.id);
 
       // Check if storage bucket exists
       await ensureStorageBucket();
@@ -358,76 +398,84 @@ export const UserProfile: React.FC = () => {
       // Convert data URL to blob
       const response = await fetch(capturedPhoto);
       const blob = await response.blob();
-      
-      // Create file from blob
-      const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
 
-      console.log('Created file from captured photo:', { 
-        fileName: file.name, 
-        fileSize: file.size, 
-        fileType: file.type 
+      // Create file from blob
+      const file = new File([blob], "camera-photo.jpg", { type: "image/jpeg" });
+
+      console.log("Created file from captured photo:", {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
       });
 
       // Upload to Supabase Storage
       const timestamp = Date.now();
       const filePath = `${profile.id}/camera-photo-${timestamp}.jpg`;
 
-      console.log('Uploading captured photo to storage:', { filePath, bucket: 'profile-pictures' });
+      console.log("Uploading captured photo to storage:", {
+        filePath,
+        bucket: "profile-pictures",
+      });
 
       const { error: uploadError } = await supabase.storage
-        .from('profile-pictures')
+        .from("profile-pictures")
         .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true
+          cacheControl: "3600",
+          upsert: true,
         });
 
       if (uploadError) {
-        console.error('Storage upload error for captured photo:', uploadError);
-        console.error('Captured photo upload error details:', {
+        console.error("Storage upload error for captured photo:", uploadError);
+        console.error("Captured photo upload error details:", {
           message: uploadError.message,
-          name: uploadError.name
+          name: uploadError.name,
         });
         throw new Error(`Storage error: ${uploadError.message}`);
       }
 
-      console.log('Captured photo storage upload successful');
+      console.log("Captured photo storage upload successful");
 
       // Get public URL
       const { data } = supabase.storage
-        .from('profile-pictures')
+        .from("profile-pictures")
         .getPublicUrl(filePath);
 
-      console.log('Got public URL for captured photo:', data.publicUrl);
+      console.log("Got public URL for captured photo:", data.publicUrl);
 
       // Update user profile with photo URL
-      console.log('Updating user profile with captured photo URL...');
+      console.log("Updating user profile with captured photo URL...");
       const { error: updateError } = await supabase
-        .from('users')
+        .from("users")
         .update({ profile_picture_url: data.publicUrl })
-        .eq('id', profile.id);
+        .eq("id", profile.id);
 
       if (updateError) {
-        console.error('Database update error for captured photo:', updateError);
-        console.error('Captured photo database error details:', {
+        console.error("Database update error for captured photo:", updateError);
+        console.error("Captured photo database error details:", {
           message: updateError.message,
           code: updateError.code,
           details: updateError.details,
-          hint: updateError.hint
+          hint: updateError.hint,
         });
         throw new Error(`Database error: ${updateError.message}`);
       }
 
-      console.log('Captured photo profile update successful');
+      console.log("Captured photo profile update successful");
 
       // Update local state
-      setProfile(prev => prev ? { ...prev, profile_picture_url: data.publicUrl } : null);
-      
+      setProfile((prev) =>
+        prev ? { ...prev, profile_picture_url: data.publicUrl } : null
+      );
+
       // Clean up
       stopCamera();
-
     } catch (error) {
-      console.error('Error uploading captured photo:', error);
-      setError(`Failed to upload photo: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Error uploading captured photo:", error);
+      setError(
+        `Failed to upload photo: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     } finally {
       setUploadingPhoto(false);
     }
@@ -437,33 +485,36 @@ export const UserProfile: React.FC = () => {
 
   // Debug function to test permissions (can be called from browser console)
   const testPermissions = async () => {
-    console.log('=== TESTING PERMISSIONS ===');
-    
+    console.log("=== TESTING PERMISSIONS ===");
+
     // Test 1: Check current user
-    console.log('Current user:', currentUser?.id);
-    console.log('Profile ID:', profile?.id);
-    console.log('Is own profile:', isOwnProfile);
-    
+    console.log("Current user:", currentUser?.id);
+    console.log("Profile ID:", profile?.id);
+    console.log("Is own profile:", isOwnProfile);
+
     // Test 2: Test storage bucket access
     try {
       const { data: storageData, error: storageError } = await supabase.storage
-        .from('profile-pictures')
-        .list('', { limit: 1 });
-      console.log('Storage bucket test:', { data: storageData, error: storageError });
+        .from("profile-pictures")
+        .list("", { limit: 1 });
+      console.log("Storage bucket test:", {
+        data: storageData,
+        error: storageError,
+      });
     } catch (error) {
-      console.error('Storage bucket test failed:', error);
+      console.error("Storage bucket test failed:", error);
     }
-    
+
     // Test 3: Test database access
     try {
       const { data: dbData, error: dbError } = await supabase
-        .from('users')
-        .select('id, profile_picture_url')
-        .eq('id', currentUser?.id)
+        .from("users")
+        .select("id, profile_picture_url")
+        .eq("id", currentUser?.id)
         .single();
-      console.log('Database access test:', { data: dbData, error: dbError });
+      console.log("Database access test:", { data: dbData, error: dbError });
     } catch (error) {
-      console.error('Database access test failed:', error);
+      console.error("Database access test failed:", error);
     }
   };
 
@@ -475,20 +526,22 @@ export const UserProfile: React.FC = () => {
     try {
       // Try to list files in the bucket to check if it exists
       const { error } = await supabase.storage
-        .from('profile-pictures')
-        .list('', { limit: 1 });
+        .from("profile-pictures")
+        .list("", { limit: 1 });
 
-      if (error && error.message.includes('not found')) {
-        console.log('Storage bucket not found, creating...');
+      if (error && error.message.includes("not found")) {
+        console.log("Storage bucket not found, creating...");
         // The bucket doesn't exist, we need to create it
         // This should be done via the migration, but let's handle it gracefully
-        throw new Error('Storage bucket "profile-pictures" does not exist. Please run the database migration first.');
+        throw new Error(
+          'Storage bucket "profile-pictures" does not exist. Please run the database migration first.'
+        );
       }
-      
-      console.log('Storage bucket exists and is accessible');
+
+      console.log("Storage bucket exists and is accessible");
       return true;
     } catch (error) {
-      console.error('Storage bucket check failed:', error);
+      console.error("Storage bucket check failed:", error);
       throw error;
     }
   };
@@ -504,7 +557,7 @@ export const UserProfile: React.FC = () => {
   useEffect(() => {
     return () => {
       if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       }
     };
   }, [stream]);
@@ -570,6 +623,10 @@ export const UserProfile: React.FC = () => {
         setReviewsLoading(true);
         const userReviews = await getUserReviews(id);
         setReviews(userReviews);
+
+        // Fetch user consumption data
+        const consumption = await drinksService.getUserTotalConsumption(id);
+        setConsumptionData(consumption);
       } catch (error) {
         console.error("Error fetching profile:", error);
         setError("Failed to load profile");
@@ -746,9 +803,18 @@ export const UserProfile: React.FC = () => {
 
       // Check for new badges after follow action
       if (currentUser) {
-        const newBadges = await checkAndAwardBadges(currentUser.id, 'user_followed', {});
-        newBadges.forEach(badgeName => {
-          showBadgeEarned(badgeName, '🤝', `You earned the ${badgeName} badge!`, 'bronze');
+        const newBadges = await checkAndAwardBadges(
+          currentUser.id,
+          "user_followed",
+          {}
+        );
+        newBadges.forEach((badgeName) => {
+          showBadgeEarned(
+            badgeName,
+            "🤝",
+            `You earned the ${badgeName} badge!`,
+            "bronze"
+          );
         });
       }
     } catch (error) {
@@ -944,7 +1010,9 @@ export const UserProfile: React.FC = () => {
                     className="flex items-center space-x-1 text-green-600 hover:text-green-700 transition-colors"
                   >
                     <Users className="w-4 h-4" />
-                    <span className="font-medium">{profile.followers?.length || 0}</span>
+                    <span className="font-medium">
+                      {profile.followers?.length || 0}
+                    </span>
                     <span className="text-gray-500">followers</span>
                   </button>
                   <button
@@ -952,7 +1020,9 @@ export const UserProfile: React.FC = () => {
                     className="flex items-center space-x-1 text-purple-600 hover:text-purple-700 transition-colors"
                   >
                     <UserCheck className="w-4 h-4" />
-                    <span className="font-medium">{profile.following?.length || 0}</span>
+                    <span className="font-medium">
+                      {profile.following?.length || 0}
+                    </span>
                     <span className="text-gray-500">following</span>
                   </button>
                 </div>
@@ -1006,31 +1076,38 @@ export const UserProfile: React.FC = () => {
         )}
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center bg-blue-50 rounded-lg p-4">
-            <div className="flex items-center justify-center mb-2">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
-                <span className="text-blue-600 text-sm">📝</span>
-              </div>
-            </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}
             </div>
-            <div className="text-sm text-gray-600">Reviews</div>
+            <div className="text-xs text-gray-600">Reviews</div>
           </div>
-          
-          <div className="text-center bg-yellow-50 rounded-lg p-4">
-            <div className="flex items-center justify-center mb-2">
-              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-2">
-                <span className="text-yellow-600 text-sm">⭐</span>
-              </div>
-            </div>
+          <div className="text-center">
             <div className="text-2xl font-bold text-yellow-600">
               {averageRating > 0 ? averageRating.toFixed(1) : "N/A"}
             </div>
-            <div className="text-sm text-gray-600">Avg Rating</div>
+            <div className="text-xs text-gray-600">Avg Rating</div>
           </div>
-          
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {consumptionData?.bottles_saved || 0}
+            </div>
+            <div className="text-xs text-gray-600">Bottles Saved</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-600">
+              {profile.followers?.length || 0}
+            </div>
+            <div className="text-xs text-gray-600">Followers</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-indigo-600">
+              {profile.following?.length || 0}
+            </div>
+            <div className="text-xs text-gray-600">Following</div>
+          </div>
+
           <div className="text-center bg-gray-50 rounded-lg p-4">
             <div className="flex items-center justify-center mb-2">
               <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-2">
@@ -1051,7 +1128,9 @@ export const UserProfile: React.FC = () => {
           <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
             <span className="text-yellow-600 text-lg">🏆</span>
           </div>
-          <h2 className="text-xl font-bold text-gray-900">Badges & Achievements</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            Badges & Achievements
+          </h2>
         </div>
         <BadgeDisplay userId={profile.id} showProgress={true} compact={false} />
       </div>
@@ -1080,6 +1159,7 @@ export const UserProfile: React.FC = () => {
                 review={review}
                 showFountainInfo={true}
                 onVote={handleVote}
+                showComments={true}
               />
             ))}
           </div>
@@ -1149,7 +1229,10 @@ export const UserProfile: React.FC = () => {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log("Navigating to follower profile:", follower.id);
+                        console.log(
+                          "Navigating to follower profile:",
+                          follower.id
+                        );
                         setShowFollowersModal(false);
                         navigate(`/user/${follower.id}`);
                       }}
@@ -1218,7 +1301,10 @@ export const UserProfile: React.FC = () => {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log("Navigating to following profile:", following.id);
+                        console.log(
+                          "Navigating to following profile:",
+                          following.id
+                        );
                         setShowFollowingModal(false);
                         navigate(`/user/${following.id}`);
                       }}
@@ -1272,11 +1358,14 @@ export const UserProfile: React.FC = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-4">
               {!capturedPhoto ? (
                 <div className="space-y-4">
-                  <div className="relative bg-gray-100 rounded-lg overflow-hidden" style={{ aspectRatio: '1/1' }}>
+                  <div
+                    className="relative bg-gray-100 rounded-lg overflow-hidden"
+                    style={{ aspectRatio: "1/1" }}
+                  >
                     <video
                       ref={setVideoRef}
                       autoPlay
@@ -1286,7 +1375,7 @@ export const UserProfile: React.FC = () => {
                     />
                     <div className="absolute inset-0 border-2 border-white rounded-lg pointer-events-none"></div>
                   </div>
-                  
+
                   <div className="flex justify-center space-x-4">
                     <button
                       onClick={capturePhoto}
@@ -1306,14 +1395,17 @@ export const UserProfile: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="relative bg-gray-100 rounded-lg overflow-hidden" style={{ aspectRatio: '1/1' }}>
+                  <div
+                    className="relative bg-gray-100 rounded-lg overflow-hidden"
+                    style={{ aspectRatio: "1/1" }}
+                  >
                     <img
                       src={capturedPhoto}
                       alt="Captured photo"
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  
+
                   <div className="flex justify-center space-x-4">
                     <button
                       onClick={useCapturedPhoto}

@@ -14,6 +14,7 @@ import { FountainDetail } from "./components/FountainDetail";
 import { FrontPage } from "./components/FrontPage";
 import { UserProfile } from "./components/UserProfile";
 import { FrontPage } from "./components/FrontPage";
+import { UserProfile } from "./components/UserProfile";
 import { supabaseConfig } from "./config/supabase";
 
 const AppContent: React.FC = () => {

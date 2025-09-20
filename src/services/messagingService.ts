@@ -277,3 +277,30 @@ export async function subscribeToConversation(
     )
     .subscribe();
 }
+
+// Subscribe to all messages for the current user (for conversation list updates)
+export async function subscribeToAllMessages(
+  callback: (payload: any) => void
+) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("User must be authenticated");
+  }
+
+  return supabase
+    .channel(`all_messages_${user.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "messages",
+        filter: `or(sender_id.eq.${user.id},receiver_id.eq.${user.id})`,
+      },
+      callback
+    )
+    .subscribe();
+}

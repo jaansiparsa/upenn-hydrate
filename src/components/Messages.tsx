@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-import { ChatWindow } from "./ChatWindow";
+import { SupabaseChatWindow } from "./SupabaseChatWindow";
 import { MessageList } from "./MessageList";
 
 interface MessagesProps {
@@ -33,7 +33,7 @@ export const Messages: React.FC<MessagesProps> = ({
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="bg-white rounded-lg shadow-lg h-[600px] overflow-hidden">
         {selectedUserId ? (
-          <ChatWindow
+          <SupabaseChatWindow
             otherUserId={selectedUserId}
             otherUserName={selectedUserName}
             onBack={handleBack}

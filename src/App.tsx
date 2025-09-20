@@ -12,6 +12,7 @@ import { ConfigurationError } from "./components/ConfigurationError";
 import { Dashboard } from "./components/Dashboard";
 import { FountainDetail } from "./components/FountainDetail";
 import { FrontPage } from "./components/FrontPage";
+import { PlanDate } from "./components/PlanDate";
 import { UserProfile } from "./components/UserProfile";
 import { supabaseConfig } from "./config/supabase";
 
@@ -47,6 +48,7 @@ const AppContent: React.FC = () => {
         <Route path="/" element={<Dashboard />} />
         <Route path="/fountain/:id" element={<FountainDetail />} />
         <Route path="/user/:id" element={<UserProfile />} />
+        <Route path="/plan-date/:userId" element={<PlanDate />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
@@ -81,6 +83,10 @@ const AppContent: React.FC = () => {
       <Route
         path="/user/:id"
         element={user ? <UserProfile /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/plan-date/:userId"
+        element={user ? <PlanDate /> : <Navigate to="/login" replace />}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

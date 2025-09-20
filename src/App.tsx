@@ -11,6 +11,7 @@ import { AuthForm } from "./components/AuthForm";
 import { ConfigurationError } from "./components/ConfigurationError";
 import { Dashboard } from "./components/Dashboard";
 import { FountainDetail } from "./components/FountainDetail";
+import { FrontPage } from "./components/FrontPage";
 import { UserProfile } from "./components/UserProfile";
 import { supabaseConfig } from "./config/supabase";
 
@@ -52,12 +53,37 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <AuthForm
-      mode={authMode}
-      onToggleMode={() =>
-        setAuthMode(authMode === "signin" ? "signup" : "signin")
-      }
-    />
+    <Routes>
+      <Route path="/" element={<FrontPage />} />
+      <Route
+        path="/login"
+        element={
+          user ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <AuthForm
+              mode={authMode}
+              onToggleMode={() =>
+                setAuthMode(authMode === "signin" ? "signup" : "signin")
+              }
+            />
+          )
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={user ? <Dashboard /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/fountain/:id"
+        element={user ? <FountainDetail /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/user/:id"
+        element={user ? <UserProfile /> : <Navigate to="/login" replace />}
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 };
 

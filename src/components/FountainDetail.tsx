@@ -21,6 +21,13 @@ export const FountainDetail: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
 
+  // Handle vote updates
+  const handleVote = (updatedReview: Review) => {
+    setReviews(prev => 
+      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    );
+  };
+
   const handleReviewSubmit = async (reviewData: {
     coldness: number;
     experience: number;
@@ -414,6 +421,7 @@ export const FountainDetail: React.FC = () => {
                     key={review.id}
                     review={review}
                     showFountainInfo={false}
+                    onVote={handleVote}
                   />
                 ))}
               </div>

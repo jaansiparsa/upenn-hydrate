@@ -1,10 +1,7 @@
 import {
   ArrowLeft,
-  Calendar,
   Edit3,
-  MapPin,
   Save,
-  Star,
   User,
   UserMinus,
   UserPlus,
@@ -17,6 +14,7 @@ import type { Review } from "../services/reviewService";
 import { getUserReviews } from "../services/reviewService";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { ReviewItem } from "./ReviewItem";
 
 export const UserProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +38,13 @@ export const UserProfile: React.FC = () => {
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Handle vote updates
+  const handleVote = (updatedReview: Review) => {
+    setReviews(prev => 
+      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    );
+  };
 
   const isOwnProfile = currentUser?.id === id;
 
@@ -488,118 +493,12 @@ export const UserProfile: React.FC = () => {
         ) : reviews.length > 0 ? (
           <div className="space-y-4">
             {reviews.map((review) => (
-              <div
+              <ReviewItem
                 key={review.id}
-                className="border border-gray-200 rounded-lg p-4"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">
-                      {new Date(review.created_at || "").toLocaleDateString()}
-                    </span>
-                    <span>•</span>
-                    <MapPin className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">
-                      {review.fountains?.name} - {review.fountains?.building}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm font-medium text-gray-700">
-                      {(
-                        (review.coldness +
-                          review.experience +
-                          review.pressure +
-                          review.yum_factor) /
-                        4
-                      ).toFixed(1)}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {/* Rating Grid */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-700 w-20">
-                        Coldness:
-                      </span>
-                      <div className="flex items-center space-x-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-4 w-4 ${
-                              star <= review.coldness
-                                ? "text-blue-400 fill-current"
-                                : "text-gray-300"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-700 w-20">
-                        Experience:
-                      </span>
-                      <div className="flex items-center space-x-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-4 w-4 ${
-                              star <= review.experience
-                                ? "text-blue-400 fill-current"
-                                : "text-gray-300"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-700 w-20">
-                        Pressure:
-                      </span>
-                      <div className="flex items-center space-x-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-4 w-4 ${
-                              star <= review.pressure
-                                ? "text-blue-400 fill-current"
-                                : "text-gray-300"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-700 w-20">
-                        Yum Factor:
-                      </span>
-                      <div className="flex items-center space-x-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-4 w-4 ${
-                              star <= review.yum_factor
-                                ? "text-blue-400 fill-current"
-                                : "text-gray-300"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Comment */}
-                  {review.comment && (
-                    <div className="mt-3">
-                      <p className="text-sm text-gray-700 bg-gray-50 rounded-md p-3">
-                        {review.comment}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+                review={review}
+                showFountainInfo={true}
+                onVote={handleVote}
+              />
             ))}
           </div>
         ) : (

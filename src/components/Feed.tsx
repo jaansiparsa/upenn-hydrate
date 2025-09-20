@@ -18,6 +18,17 @@ export const Feed: React.FC = () => {
   const [followingUsers, setFollowingUsers] = useState<string[]>([]);
   const [loadingFollowing, setLoadingFollowing] = useState(false);
 
+  // Handle vote updates
+  const handleVote = (updatedReview: Review) => {
+    // Update the review in both allReviews and filtered reviews
+    setAllReviews(prev => 
+      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    );
+    setReviews(prev => 
+      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    );
+  };
+
   // Fetch user's following list
   const fetchFollowingUsers = async () => {
     if (!user) return;
@@ -231,6 +242,7 @@ export const Feed: React.FC = () => {
               key={review.id}
               review={review}
               showFountainInfo={true}
+              onVote={handleVote}
             />
           ))}
         </div>

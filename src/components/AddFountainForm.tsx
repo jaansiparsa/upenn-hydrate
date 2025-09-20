@@ -1,8 +1,7 @@
-import { ArrowLeft, Building, MapPin, Upload, X } from "lucide-react";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowLeft, Upload, X } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   createFountain,
-  uploadFountainImage,
 } from "../services/fountainService";
 
 import type { CreateFountainData } from "../services/fountainService";

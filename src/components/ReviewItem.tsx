@@ -1,74 +1,63 @@
-import { Calendar, Star, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Calendar, MessageCircle, Star } from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
 
-import React, { useState } from "react";
+import { CommentCard } from "./CommentCard";
+import { CommentForm } from "./CommentForm";
+import type { RatingComment } from "../services/commentService";
 import type { Review } from "../services/reviewService";
-import { voteOnReview, getUserVoteStatus } from "../services/reviewService";
+import { getRatingComments } from "../services/commentService";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
 
 interface ReviewItemProps {
   review: Review;
   showFountainInfo?: boolean;
   onVote?: (updatedReview: Review) => void;
+  showComments?: boolean;
 }
 
 export const ReviewItem: React.FC<ReviewItemProps> = ({
   review,
   showFountainInfo = false,
-  onVote,
+  showComments = false,
 }) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [voting, setVoting] = useState(false);
+  const [comments, setComments] = useState<RatingComment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [showCommentsSection, setShowCommentsSection] = useState(false);
 
-  const upvotes = review.upvotes?.length || 0;
-  const downvotes = review.downvotes?.length || 0;
-  const userVoteStatus = user ? getUserVoteStatus(review, user.id) : "none";
-
-  const handleVote = async (voteType: "upvote" | "downvote" | "remove") => {
-    console.log("Vote attempt:", { voteType, user: user?.id, reviewId: review.id });
-    
-    if (!user) {
-      console.log("No user found, showing alert");
-      alert("Please sign in to vote on reviews");
-      return;
-    }
-
-    if (voting) {
-      console.log("Already voting, ignoring");
-      return;
-    }
-
-    console.log("Starting vote process...");
-    setVoting(true);
+  const loadComments = useCallback(async () => {
+    setLoadingComments(true);
     try {
-      const updatedReview = await voteOnReview(review.id, voteType);
-      console.log("Vote successful:", updatedReview);
-      if (onVote) {
-        onVote(updatedReview);
-      }
+      const fetchedComments = await getRatingComments(review.id);
+      setComments(fetchedComments);
     } catch (error) {
-      console.error("Error voting on review:", error);
-      alert("Failed to vote. Please try again.");
+      console.error("Error loading comments:", error);
     } finally {
-      setVoting(false);
+      setLoadingComments(false);
     }
+  }, [review.id]);
+
+  // Load comments when comments section is opened
+  useEffect(() => {
+    if (showCommentsSection && comments.length === 0) {
+      loadComments();
+    }
+  }, [showCommentsSection, comments.length, loadComments]);
+
+  const handleCommentCreated = (newComment: RatingComment) => {
+    setComments((prev) => [...prev, newComment]);
   };
 
-  const handleUpvote = () => {
-    if (userVoteStatus === "upvoted") {
-      handleVote("remove");
-    } else {
-      handleVote("upvote");
-    }
+  const handleCommentUpdate = (updatedComment: RatingComment) => {
+    setComments((prev) =>
+      prev.map((comment) =>
+        comment.id === updatedComment.id ? updatedComment : comment
+      )
+    );
   };
 
-  const handleDownvote = () => {
-    if (userVoteStatus === "downvoted") {
-      handleVote("remove");
-    } else {
-      handleVote("downvote");
-    }
+  const handleCommentDelete = (commentId: string) => {
+    setComments((prev) => prev.filter((comment) => comment.id !== commentId));
   };
 
   return (
@@ -207,45 +196,61 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
             </p>
           </div>
         )}
+      </div>
 
-        {/* Voting Section */}
-        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
-          <div className="flex items-center space-x-4">
+      {/* Comments Section */}
+      {showComments && (
+        <div className="border-t border-gray-100 pt-4 mt-4">
+          <div className="flex items-center justify-between mb-3">
             <button
-              onClick={handleUpvote}
-              disabled={voting || !user}
-              className={`flex items-center space-x-1 px-2 py-1 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                userVoteStatus === "upvoted"
-                  ? "bg-green-100 text-green-700 hover:bg-green-200"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
+              onClick={() => setShowCommentsSection(!showCommentsSection)}
+              className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
             >
-              <ThumbsUp className="h-4 w-4" />
-              <span>{upvotes}</span>
-            </button>
-            
-            <button
-              onClick={handleDownvote}
-              disabled={voting || !user}
-              className={`flex items-center space-x-1 px-2 py-1 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                userVoteStatus === "downvoted"
-                  ? "bg-red-100 text-red-700 hover:bg-red-200"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <ThumbsDown className="h-4 w-4" />
-              <span>{downvotes}</span>
+              <MessageCircle className="h-4 w-4" />
+              <span>
+                {showCommentsSection ? "Hide" : "Show"} Comments (
+                {comments.length})
+              </span>
             </button>
           </div>
-          
-          {voting && (
-            <div className="flex items-center text-xs text-gray-500">
-              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400 mr-2"></div>
-              Voting...
+
+          {showCommentsSection && (
+            <div className="space-y-4">
+              {/* Comment Form */}
+              <CommentForm
+                ratingId={review.id}
+                onCommentCreated={handleCommentCreated}
+              />
+
+              {/* Comments List */}
+              {loadingComments ? (
+                <div className="flex justify-center items-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">
+                    Loading comments...
+                  </span>
+                </div>
+              ) : comments.length > 0 ? (
+                <div className="space-y-3">
+                  {comments.map((comment) => (
+                    <CommentCard
+                      key={comment.id}
+                      comment={comment}
+                      onCommentUpdate={handleCommentUpdate}
+                      onCommentDelete={handleCommentDelete}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  <MessageCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p>No comments yet. Be the first to comment!</p>
+                </div>
+              )}
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -1,7 +1,11 @@
-import { Calendar, Star, User } from "lucide-react";
+import { Calendar, MessageCircle, Star, User } from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
 
-import React from "react";
+import { CommentCard } from "./CommentCard";
+import { CommentForm } from "./CommentForm";
+import type { RatingComment } from "../services/commentService";
 import type { Review } from "../services/reviewService";
+import { getRatingComments } from "../services/commentService";
 
 interface ReviewCardProps {
   review: Review;
@@ -9,9 +13,17 @@ interface ReviewCardProps {
     display_name?: string;
     email?: string;
   };
+  showComments?: boolean;
 }
 
-export const ReviewCard: React.FC<ReviewCardProps> = ({ review, user }) => {
+export const ReviewCard: React.FC<ReviewCardProps> = ({
+  review,
+  user,
+  showComments = false,
+}) => {
+  const [comments, setComments] = useState<RatingComment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [showCommentsSection, setShowCommentsSection] = useState(false);
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Unknown date";
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -36,6 +48,41 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, user }) => {
     if (user?.display_name) return user.display_name;
     if (user?.email) return user.email.split("@")[0];
     return "Anonymous User";
+  };
+
+  const loadComments = useCallback(async () => {
+    setLoadingComments(true);
+    try {
+      const fetchedComments = await getRatingComments(review.id);
+      setComments(fetchedComments);
+    } catch (error) {
+      console.error("Error loading comments:", error);
+    } finally {
+      setLoadingComments(false);
+    }
+  }, [review.id]);
+
+  // Load comments when comments section is opened
+  useEffect(() => {
+    if (showCommentsSection && comments.length === 0) {
+      loadComments();
+    }
+  }, [showCommentsSection, comments.length, loadComments]);
+
+  const handleCommentCreated = (newComment: RatingComment) => {
+    setComments((prev) => [...prev, newComment]);
+  };
+
+  const handleCommentUpdate = (updatedComment: RatingComment) => {
+    setComments((prev) =>
+      prev.map((comment) =>
+        comment.id === updatedComment.id ? updatedComment : comment
+      )
+    );
+  };
+
+  const handleCommentDelete = (commentId: string) => {
+    setComments((prev) => prev.filter((comment) => comment.id !== commentId));
   };
 
   return (
@@ -89,6 +136,60 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, user }) => {
           <p className="text-sm text-gray-700 leading-relaxed">
             "{review.comment}"
           </p>
+        </div>
+      )}
+
+      {/* Comments Section */}
+      {showComments && (
+        <div className="border-t border-gray-100 pt-4 mt-4">
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={() => setShowCommentsSection(!showCommentsSection)}
+              className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span>
+                {showCommentsSection ? "Hide" : "Show"} Comments (
+                {comments.length})
+              </span>
+            </button>
+          </div>
+
+          {showCommentsSection && (
+            <div className="space-y-4">
+              {/* Comment Form */}
+              <CommentForm
+                ratingId={review.id}
+                onCommentCreated={handleCommentCreated}
+              />
+
+              {/* Comments List */}
+              {loadingComments ? (
+                <div className="flex justify-center items-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">
+                    Loading comments...
+                  </span>
+                </div>
+              ) : comments.length > 0 ? (
+                <div className="space-y-3">
+                  {comments.map((comment) => (
+                    <CommentCard
+                      key={comment.id}
+                      comment={comment}
+                      onCommentUpdate={handleCommentUpdate}
+                      onCommentDelete={handleCommentDelete}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  <MessageCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <p>No comments yet. Be the first to comment!</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

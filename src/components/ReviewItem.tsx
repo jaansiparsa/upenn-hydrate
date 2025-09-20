@@ -88,13 +88,21 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
         <div className="flex items-center space-x-3">
           <button
             onClick={() => navigate(`/user/${review.user_id}`)}
-            className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors cursor-pointer"
+            className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors cursor-pointer overflow-hidden"
           >
-            <span className="text-sm font-medium text-blue-600">
-              {review.users?.display_name?.charAt(0) ||
-                review.users?.email?.charAt(0) ||
-                "U"}
-            </span>
+            {review.users?.profile_picture_url ? (
+              <img
+                src={review.users.profile_picture_url}
+                alt={review.users?.display_name || "User"}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-sm font-medium text-blue-600">
+                {review.users?.display_name?.charAt(0) ||
+                  review.users?.email?.charAt(0) ||
+                  "U"}
+              </span>
+            )}
           </button>
           <div>
             <button

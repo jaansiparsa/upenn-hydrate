@@ -3,8 +3,8 @@ import React, { useEffect, useState } from "react";
 
 import type { Review } from "../services/reviewService";
 import { ReviewCard } from "./ReviewCard";
-import { getUserReviews } from "../services/reviewService";
 import { drinksService } from "../services/drinksService";
+import { getUserReviews } from "../services/reviewService";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -15,6 +15,7 @@ export const Profile: React.FC = () => {
     email?: string;
     total_ratings: number;
     badges: string[];
+    profile_picture_url?: string;
     followers: string[];
     following: string[];
   } | null>(null);
@@ -88,7 +89,9 @@ export const Profile: React.FC = () => {
         setReviews(userReviews);
 
         // Fetch user consumption data
-        const consumption = await drinksService.getUserTotalConsumption(user.id);
+        const consumption = await drinksService.getUserTotalConsumption(
+          user.id
+        );
         setConsumptionData(consumption);
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -187,8 +190,16 @@ export const Profile: React.FC = () => {
       <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
-            <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="h-8 w-8 text-blue-600" />
+            <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+              {profile?.profile_picture_url ? (
+                <img
+                  src={profile.profile_picture_url}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="h-8 w-8 text-blue-600" />
+              )}
             </div>
             <div className="flex-1">
               {editingName ? (

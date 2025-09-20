@@ -152,7 +152,8 @@ export const Feed: React.FC = () => {
           *,
           users:user_id (
             display_name,
-            email
+            email,
+            profile_picture_url
           ),
           fountains:fountain_id (
             name,

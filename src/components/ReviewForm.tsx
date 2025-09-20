@@ -9,6 +9,7 @@ import {
 import type { Review } from "../services/reviewService";
 import { Star } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { checkAndAwardBadges } from "../services/badgeService";
 
 interface ReviewFormProps {
   fountainId: string;
@@ -167,6 +168,24 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       // Update local state
       setExistingReview(savedReview);
       setIsEditing(true);
+
+      // Check for new badges after review creation/update
+      if (!isEditing) {
+        try {
+          const newBadges = await checkAndAwardBadges(user.id, 'review_created', {
+            fountain_id: fountainId,
+            review_id: savedReview.id
+          });
+          
+          // Show badge notifications (you could integrate with a notification system here)
+          if (newBadges.length > 0) {
+            console.log('New badges earned:', newBadges);
+            // You could show a toast notification or badge popup here
+          }
+        } catch (error) {
+          console.error('Error checking badges:', error);
+        }
+      }
 
       // Call optional onSubmit callback
       if (onSubmit) {

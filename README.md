@@ -1,14 +1,14 @@
-# Hydrate - React + TypeScript + Supabase Web App
+# Hydrate
 
-A modern web application built with React, TypeScript, and Supabase for authentication and backend services.
+Changing the water fountain experience at Penn!
 
 ## Features
 
-- 🔐 **Authentication**: Complete sign-up and sign-in functionality with Supabase Auth
-- 🎨 **Modern UI**: Beautiful, responsive design with Tailwind CSS
-- 📱 **Mobile-First**: Responsive design that works on all devices
-- ⚡ **Fast Development**: Built with Vite for lightning-fast development
-- 🔒 **Type Safety**: Full TypeScript support for better development experience
+-  **Authentication**: Complete sign-up and sign-in functionality with Supabase Auth
+-  **Modern UI**: Beautiful, responsive design with Tailwind CSS
+-  **Mobile-First**: Responsive design that works on all devices
+-  **Fast Development**: Built with Vite for lightning-fast development
+-  **Type Safety**: Full TypeScript support for better development experience
 
 ## Tech Stack
 

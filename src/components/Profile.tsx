@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 
 import type { Review } from "../services/reviewService";
 import { ReviewCard } from "./ReviewCard";
+import { drinksService } from "../services/drinksService";
 import { getUserReviews } from "../services/reviewService";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
@@ -14,6 +15,9 @@ export const Profile: React.FC = () => {
     email?: string;
     total_ratings: number;
     badges: string[];
+    profile_picture_url?: string;
+    followers: string[];
+    following: string[];
   } | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +26,12 @@ export const Profile: React.FC = () => {
   const [newDisplayName, setNewDisplayName] = useState("");
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consumptionData, setConsumptionData] = useState<{
+    total_ml: number;
+    total_oz: number;
+    total_drinks: number;
+    bottles_saved: number;
+  } | null>(null);
 
   // Fetch user profile and reviews
   useEffect(() => {
@@ -60,6 +70,8 @@ export const Profile: React.FC = () => {
                   "User",
                 total_ratings: 0,
                 badges: [],
+                followers: [],
+                following: [],
               },
             ])
             .select()
@@ -75,6 +87,12 @@ export const Profile: React.FC = () => {
         setReviewsLoading(true);
         const userReviews = await getUserReviews(user.id);
         setReviews(userReviews);
+
+        // Fetch user consumption data
+        const consumption = await drinksService.getUserTotalConsumption(
+          user.id
+        );
+        setConsumptionData(consumption);
       } catch (error) {
         console.error("Error fetching profile:", error);
         setError("Failed to load profile");
@@ -172,8 +190,16 @@ export const Profile: React.FC = () => {
       <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
-            <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="h-8 w-8 text-blue-600" />
+            <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+              {profile?.profile_picture_url ? (
+                <img
+                  src={profile.profile_picture_url}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="h-8 w-8 text-blue-600" />
+              )}
             </div>
             <div className="flex-1">
               {editingName ? (
@@ -224,18 +250,36 @@ export const Profile: React.FC = () => {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}
             </div>
-            <div className="text-sm text-gray-600">Total Reviews</div>
+            <div className="text-xs text-gray-600">Reviews</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-yellow-600">
+            <div className="text-2xl font-bold text-yellow-600">
               {averageRating > 0 ? averageRating.toFixed(1) : "N/A"}
             </div>
-            <div className="text-sm text-gray-600">Average Rating</div>
+            <div className="text-xs text-gray-600">Avg Rating</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {consumptionData?.bottles_saved || 0}
+            </div>
+            <div className="text-xs text-gray-600">Bottles Saved</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-600">
+              {profile.followers?.length || 0}
+            </div>
+            <div className="text-xs text-gray-600">Followers</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-indigo-600">
+              {profile.following?.length || 0}
+            </div>
+            <div className="text-xs text-gray-600">Following</div>
           </div>
           <div className="text-center">
             <div className="text-sm text-gray-600">Badges</div>

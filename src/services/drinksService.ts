@@ -141,4 +141,33 @@ export const drinksService = {
 
     return data;
   },
+
+  // Get user's total water consumption statistics
+  async getUserTotalConsumption(userId: string): Promise<{
+    total_ml: number;
+    total_oz: number;
+    total_drinks: number;
+    bottles_saved: number;
+  }> {
+    const { data, error } = await supabase
+      .from("drinks")
+      .select("amount_ml")
+      .eq("user_id", userId);
+
+    if (error) {
+      throw new Error(`Failed to fetch user consumption: ${error.message}`);
+    }
+
+    const total_ml = data?.reduce((sum, drink) => sum + (drink.amount_ml || 0), 0) || 0;
+    const total_oz = Math.round(total_ml / 29.5735); // Convert ml to oz
+    const total_drinks = data?.length || 0;
+    const bottles_saved = Math.round(total_oz / 16); // 16 oz per bottle
+
+    return {
+      total_ml,
+      total_oz,
+      total_drinks,
+      bottles_saved,
+    };
+  },
 };

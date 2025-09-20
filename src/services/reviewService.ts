@@ -13,6 +13,7 @@ export interface Review {
   users?: {
     display_name?: string;
     email?: string;
+    profile_picture_url?: string;
   };
   fountains?: {
     name: string;
@@ -49,7 +50,8 @@ export const getFountainReviews = async (
       *,
       users:user_id (
         display_name,
-        email
+        email,
+        profile_picture_url
       )
     `
     )
@@ -72,7 +74,8 @@ export const getUserReviews = async (userId: string): Promise<Review[]> => {
       *,
       users:user_id (
         display_name,
-        email
+        email,
+        profile_picture_url
       ),
       fountains:fountain_id (
         name,

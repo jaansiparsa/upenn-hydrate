@@ -41,6 +41,20 @@ const AppContent: React.FC = () => {
     );
   }
 
+<<<<<<< HEAD
+=======
+  if (user) {
+    return (
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/fountain/:id" element={<FountainDetail />} />
+        <Route path="/user/:id" element={<UserProfile />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
+
+>>>>>>> main
   return (
     <Routes>
       <Route path="/" element={<FrontPage />} />

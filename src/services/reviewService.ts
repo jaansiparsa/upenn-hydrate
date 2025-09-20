@@ -130,7 +130,7 @@ export const createReview = async (
   }
 
   // First, ensure the user exists in the users table
-  const { data: userData, error: userError } = await supabase
+  const { data: _userData, error: userError } = await supabase
     .from("users")
     .select("id")
     .eq("id", user.id)

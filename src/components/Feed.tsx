@@ -22,13 +22,11 @@ export const Feed: React.FC = () => {
   const [commentsMap, setCommentsMap] = useState<
     Record<string, RatingComment[]>
   >({});
-  const [loadingComments, setLoadingComments] = useState(false);
 
   // Load comments for all reviews
   const loadCommentsForReviews = async (reviewsToLoad: Review[]) => {
     if (reviewsToLoad.length === 0) return;
 
-    setLoadingComments(true);
     try {
       const commentsPromises = reviewsToLoad.map(async (review) => {
         try {
@@ -53,8 +51,6 @@ export const Feed: React.FC = () => {
       setCommentsMap((prev) => ({ ...prev, ...newCommentsMap }));
     } catch (error) {
       console.error("Error loading comments:", error);
-    } finally {
-      setLoadingComments(false);
     }
   };
 

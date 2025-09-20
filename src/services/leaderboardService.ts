@@ -77,6 +77,7 @@ export const leaderboardService = {
             display_name: `User ${userId.slice(0, 8)}`, // Fallback display name
             total_ml_consumed: 0,
             total_drinks: 0,
+            rank: 0, // Will be set later when sorting
           };
         }
         acc[userId].total_ml_consumed += drink.amount_ml || 0;
@@ -149,9 +150,12 @@ export const leaderboardService = {
         if (!acc[userId]) {
           acc[userId] = {
             user_id: userId,
-            display_name: rating.users.display_name,
+            display_name:
+              (rating.users as any)?.display_name ||
+              `User ${userId.slice(0, 8)}`,
             total_upvotes: 0,
             total_reviews: 0,
+            rank: 0, // Will be set later when sorting
           };
         }
         // Count the number of people who upvoted this rating
@@ -207,7 +211,9 @@ export const leaderboardService = {
         if (!acc[fountainId]) {
           acc[fountainId] = {
             fountain_id: fountainId,
-            name: rating.fountains.name,
+            name:
+              (rating.fountains as any)?.name ||
+              `Fountain ${fountainId.slice(0, 8)}`,
             ratings: [],
           };
         }

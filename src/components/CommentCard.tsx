@@ -1,13 +1,11 @@
 import {
-  ChevronDown,
-  ChevronUp,
+  Check,
   Edit3,
   MoreHorizontal,
-  Trash2,
-  ThumbsUp,
-  ThumbsDown,
   Reply,
-  Check,
+  ThumbsDown,
+  ThumbsUp,
+  Trash2,
 } from "lucide-react";
 import React, { useState } from "react";
 import {
@@ -112,7 +110,8 @@ export const CommentCard: React.FC<CommentCardProps> = ({
       .slice(0, 2);
   };
 
-  const displayName = comment.users.display_name ||
+  const displayName =
+    comment.users.display_name ||
     comment.users.email?.split("@")[0] ||
     "Anonymous";
 
@@ -202,9 +201,7 @@ export const CommentCard: React.FC<CommentCardProps> = ({
             onClick={() => handleVote(hasDownvoted ? "remove" : "downvote")}
             disabled={isVoting}
             className={`flex items-center space-x-1 text-sm transition-colors ${
-              hasDownvoted
-                ? "text-red-500"
-                : "text-gray-500 hover:text-red-500"
+              hasDownvoted ? "text-red-500" : "text-gray-500 hover:text-red-500"
             } ${isVoting ? "opacity-50" : ""}`}
           >
             <ThumbsDown className="h-4 w-4" />

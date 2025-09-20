@@ -34,6 +34,12 @@ export const PlanDate: React.FC = () => {
   }, [userId, user, navigate]);
 
   const loadPlanData = async () => {
+    if (!user || !userId) {
+      setError("Missing user or userId");
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const data = await getPlanDateData(user.id, userId);

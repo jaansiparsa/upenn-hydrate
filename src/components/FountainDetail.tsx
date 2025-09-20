@@ -23,8 +23,10 @@ export const FountainDetail: React.FC = () => {
 
   // Handle vote updates
   const handleVote = (updatedReview: Review) => {
-    setReviews(prev => 
-      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    setReviews((prev) =>
+      prev.map((review) =>
+        review.id === updatedReview.id ? updatedReview : review
+      )
     );
   };
 

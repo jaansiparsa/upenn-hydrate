@@ -11,10 +11,10 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import type { Review } from "../services/reviewService";
+import { ReviewItem } from "./ReviewItem";
 import { getUserReviews } from "../services/reviewService";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
-import { ReviewItem } from "./ReviewItem";
 
 export const UserProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,14 +41,12 @@ export const UserProfile: React.FC = () => {
 
   // Handle vote updates
   const handleVote = (updatedReview: Review) => {
-    setReviews(prev => 
-      prev.map(review => review.id === updatedReview.id ? updatedReview : review)
+    setReviews((prev) =>
+      prev.map((review) =>
+        review.id === updatedReview.id ? updatedReview : review
+      )
     );
   };
-<<<<<<< HEAD
-=======
-
->>>>>>> main
   const isOwnProfile = currentUser?.id === id;
 
   // Fetch user profile and reviews

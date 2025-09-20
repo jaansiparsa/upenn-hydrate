@@ -11,8 +11,8 @@ import { AuthForm } from "./components/AuthForm";
 import { ConfigurationError } from "./components/ConfigurationError";
 import { Dashboard } from "./components/Dashboard";
 import { FountainDetail } from "./components/FountainDetail";
-import { UserProfile } from "./components/UserProfile";
 import { FrontPage } from "./components/FrontPage";
+import { UserProfile } from "./components/UserProfile";
 import { supabaseConfig } from "./config/supabase";
 
 const AppContent: React.FC = () => {
@@ -41,8 +41,6 @@ const AppContent: React.FC = () => {
     );
   }
 
-<<<<<<< HEAD
-=======
   if (user) {
     return (
       <Routes>
@@ -54,12 +52,11 @@ const AppContent: React.FC = () => {
     );
   }
 
->>>>>>> main
   return (
     <Routes>
       <Route path="/" element={<FrontPage />} />
-      <Route 
-        path="/login" 
+      <Route
+        path="/login"
         element={
           user ? (
             <Navigate to="/dashboard" replace />
@@ -71,25 +68,19 @@ const AppContent: React.FC = () => {
               }
             />
           )
-        } 
+        }
       />
-      <Route 
-        path="/dashboard" 
-        element={
-          user ? <Dashboard /> : <Navigate to="/login" replace />
-        } 
+      <Route
+        path="/dashboard"
+        element={user ? <Dashboard /> : <Navigate to="/login" replace />}
       />
-      <Route 
-        path="/fountain/:id" 
-        element={
-          user ? <FountainDetail /> : <Navigate to="/login" replace />
-        } 
+      <Route
+        path="/fountain/:id"
+        element={user ? <FountainDetail /> : <Navigate to="/login" replace />}
       />
-      <Route 
-        path="/user/:id" 
-        element={
-          user ? <UserProfile /> : <Navigate to="/login" replace />
-        } 
+      <Route
+        path="/user/:id"
+        element={user ? <UserProfile /> : <Navigate to="/login" replace />}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

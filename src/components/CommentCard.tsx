@@ -4,6 +4,10 @@ import {
   Edit3,
   MoreHorizontal,
   Trash2,
+  ThumbsUp,
+  ThumbsDown,
+  Reply,
+  Check,
 } from "lucide-react";
 import React, { useState } from "react";
 import {
@@ -98,132 +102,155 @@ export const CommentCard: React.FC<CommentCardProps> = ({
     }
   };
 
+  // Generate avatar initials
+  const getAvatarInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const displayName = comment.users.display_name ||
+    comment.users.email?.split("@")[0] ||
+    "Anonymous";
+
   return (
-    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center space-x-2">
-          <span className="font-medium text-gray-900">
-            {comment.users.display_name ||
-              comment.users.email?.split("@")[0] ||
-              "Anonymous"}
-          </span>
-          <span className="text-sm text-gray-500">
-            {formatDate(comment.created_at)}
-          </span>
+    <div className="flex space-x-3 py-4">
+      {/* Avatar */}
+      <div className="flex-shrink-0">
+        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+          {getAvatarInitials(displayName)}
         </div>
-
-        {isOwnComment && (
-          <div className="relative">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-            >
-              <MoreHorizontal className="h-4 w-4 text-gray-500" />
-            </button>
-
-            {showMenu && (
-              <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
-                <button
-                  onClick={() => {
-                    setIsEditing(true);
-                    setShowMenu(false);
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                >
-                  <Edit3 className="h-4 w-4" />
-                  <span>Edit</span>
-                </button>
-                <button
-                  onClick={() => {
-                    handleDelete();
-                    setShowMenu(false);
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Delete</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Comment Content */}
-      {isEditing ? (
-        <div className="space-y-2">
-          <textarea
-            value={editText}
-            onChange={(e) => setEditText(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={3}
-            maxLength={1000}
-          />
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">
-              {editText.length}/1000 characters
-            </span>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditText(comment.comment_text);
-                }}
-                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleEdit}
-                disabled={isUpdating || !editText.trim()}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-              >
-                {isUpdating ? "Saving..." : "Save"}
-              </button>
+      <div className="flex-1 min-w-0">
+        {/* Header */}
+        <div className="flex items-center space-x-2 mb-1">
+          <span className="font-semibold text-gray-900 text-sm">
+            {displayName}
+          </span>
+          <span className="text-gray-500 text-sm">
+            {formatDate(comment.created_at)}
+          </span>
+          {/* Verified badge for certain users (you can customize this logic) */}
+          {displayName === "Skill Sprout" && (
+            <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+              <Check className="h-2.5 w-2.5 text-white" />
+            </div>
+          )}
+        </div>
+
+        {/* Comment Text */}
+        {isEditing ? (
+          <div className="space-y-3">
+            <textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+              rows={3}
+              maxLength={1000}
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">
+                {editText.length}/1000 characters
+              </span>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditText(comment.comment_text);
+                  }}
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEdit}
+                  disabled={isUpdating || !editText.trim()}
+                  className="px-3 py-1 text-sm bg-primary-500 text-white rounded hover:bg-primary-600 disabled:opacity-50 transition-colors"
+                >
+                  {isUpdating ? "Saving..." : "Save"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <p className="text-gray-800 whitespace-pre-wrap">
-          {comment.comment_text}
-        </p>
-      )}
+        ) : (
+          <p className="text-gray-800 text-sm leading-relaxed mb-3">
+            {comment.comment_text}
+          </p>
+        )}
 
-      {/* Voting Section */}
-      <div className="flex items-center space-x-4 mt-3 pt-3 border-t border-gray-200">
-        <div className="flex items-center space-x-1">
+        {/* Interaction Buttons */}
+        <div className="flex items-center space-x-4">
           <button
             onClick={() => handleVote(hasUpvoted ? "remove" : "upvote")}
             disabled={isVoting}
-            className={`p-1 rounded-full transition-colors ${
+            className={`flex items-center space-x-1 text-sm transition-colors ${
               hasUpvoted
-                ? "text-green-600 bg-green-100"
-                : "text-gray-500 hover:text-green-600 hover:bg-green-50"
+                ? "text-primary-500"
+                : "text-gray-500 hover:text-primary-500"
             } ${isVoting ? "opacity-50" : ""}`}
           >
-            <ChevronUp className="h-4 w-4" />
+            <ThumbsUp className="h-4 w-4" />
+            <span className="font-medium">{comment.upvotes.length}</span>
           </button>
-          <span className="text-sm font-medium text-gray-700 min-w-[20px] text-center">
-            {comment.upvotes.length}
-          </span>
-        </div>
 
-        <div className="flex items-center space-x-1">
           <button
             onClick={() => handleVote(hasDownvoted ? "remove" : "downvote")}
             disabled={isVoting}
-            className={`p-1 rounded-full transition-colors ${
+            className={`flex items-center space-x-1 text-sm transition-colors ${
               hasDownvoted
-                ? "text-red-600 bg-red-100"
-                : "text-gray-500 hover:text-red-600 hover:bg-red-50"
+                ? "text-red-500"
+                : "text-gray-500 hover:text-red-500"
             } ${isVoting ? "opacity-50" : ""}`}
           >
-            <ChevronDown className="h-4 w-4" />
+            <ThumbsDown className="h-4 w-4" />
+            <span className="font-medium">{comment.downvotes.length}</span>
           </button>
-          <span className="text-sm font-medium text-gray-700 min-w-[20px] text-center">
-            {comment.downvotes.length}
-          </span>
+
+          <button className="flex items-center space-x-1 text-sm text-gray-500 hover:text-gray-700 transition-colors">
+            <Reply className="h-4 w-4" />
+            <span>Reply</span>
+          </button>
+
+          {isOwnComment && (
+            <div className="relative">
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <MoreHorizontal className="h-4 w-4 text-gray-500" />
+              </button>
+
+              {showMenu && (
+                <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+                  <button
+                    onClick={() => {
+                      setIsEditing(true);
+                      setShowMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                    <span>Edit</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDelete();
+                      setShowMenu(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Delete</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

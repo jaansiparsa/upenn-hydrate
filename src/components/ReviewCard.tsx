@@ -1,4 +1,4 @@
-import { Calendar, MessageCircle, Star, User } from "lucide-react";
+import { Calendar, MessageCircle, Star, User, ChevronDown } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 
 import { CommentCard } from "./CommentCard";
@@ -23,7 +23,6 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 }) => {
   const [comments, setComments] = useState<RatingComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
-  const [showCommentsSection, setShowCommentsSection] = useState(false);
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Unknown date";
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -62,12 +61,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
     }
   }, [review.id]);
 
-  // Load comments when comments section is opened
+  // Load comments when comments section is shown
   useEffect(() => {
-    if (showCommentsSection && comments.length === 0) {
+    if (showComments && comments.length === 0) {
       loadComments();
     }
-  }, [showCommentsSection, comments.length, loadComments]);
+  }, [showComments, comments.length, loadComments]);
 
   const handleCommentCreated = (newComment: RatingComment) => {
     setComments((prev) => [...prev, newComment]);
@@ -142,54 +141,59 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       {/* Comments Section */}
       {showComments && (
         <div className="border-t border-gray-100 pt-4 mt-4">
-          <div className="flex items-center justify-between mb-3">
-            <button
-              onClick={() => setShowCommentsSection(!showCommentsSection)}
-              className="flex items-center space-x-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>
-                {showCommentsSection ? "Hide" : "Show"} Comments (
-                {comments.length})
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <h3 className="text-lg font-semibold text-gray-900">Comments</h3>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                {comments.length}
               </span>
-            </button>
+            </div>
+            
+            <div className="relative">
+              <select className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-1.5 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <option>Most recent</option>
+                <option>Oldest first</option>
+                <option>Most liked</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </div>
+            </div>
           </div>
 
-          {showCommentsSection && (
-            <div className="space-y-4">
-              {/* Comment Form */}
-              <CommentForm
-                ratingId={review.id}
-                onCommentCreated={handleCommentCreated}
-              />
+          <div className="space-y-6">
+            {/* Comment Form */}
+            <CommentForm
+              ratingId={review.id}
+              onCommentCreated={handleCommentCreated}
+            />
 
-              {/* Comments List */}
-              {loadingComments ? (
-                <div className="flex justify-center items-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                  <span className="ml-2 text-gray-600">
-                    Loading comments...
-                  </span>
-                </div>
-              ) : comments.length > 0 ? (
-                <div className="space-y-3">
-                  {comments.map((comment) => (
-                    <CommentCard
-                      key={comment.id}
-                      comment={comment}
-                      onCommentUpdate={handleCommentUpdate}
-                      onCommentDelete={handleCommentDelete}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-gray-500">
-                  <MessageCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                  <p>No comments yet. Be the first to comment!</p>
-                </div>
-              )}
-            </div>
-          )}
+            {/* Comments List */}
+            {loadingComments ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600"></div>
+                <span className="ml-2 text-gray-600">
+                  Loading comments...
+                </span>
+              </div>
+            ) : comments.length > 0 ? (
+              <div className="space-y-1">
+                {comments.map((comment) => (
+                  <CommentCard
+                    key={comment.id}
+                    comment={comment}
+                    onCommentUpdate={handleCommentUpdate}
+                    onCommentDelete={handleCommentDelete}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <MessageCircle className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p>No comments yet. Be the first to comment!</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

@@ -74,6 +74,11 @@ export const getUserReviews = async (userId: string): Promise<Review[]> => {
     .select(
       `
       *,
+      users:user_id (
+        display_name,
+        email,
+        profile_picture_url
+      ),
       fountains:fountain_id (
         name,
         building,

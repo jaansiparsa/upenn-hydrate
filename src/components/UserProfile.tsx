@@ -8,7 +8,6 @@ import {
   Users,
   UserCheck,
   X,
-  Eye,
   Camera,
   Upload,
   RotateCcw,
@@ -160,6 +159,11 @@ export const UserProfile: React.FC = () => {
       setUploadingPhoto(true);
       setError(null);
 
+      console.log('=== PROFILE PICTURE UPLOAD DEBUG ===');
+      console.log('Current user:', currentUser?.id);
+      console.log('Profile ID:', profile.id);
+      console.log('File details:', { name: file.name, size: file.size, type: file.type });
+
       // Check if storage bucket exists
       await ensureStorageBucket();
 
@@ -186,6 +190,10 @@ export const UserProfile: React.FC = () => {
 
       if (uploadError) {
         console.error('Storage upload error:', uploadError);
+        console.error('Upload error details:', {
+          message: uploadError.message,
+          name: uploadError.name
+        });
         throw new Error(`Storage error: ${uploadError.message}`);
       }
 
@@ -207,6 +215,12 @@ export const UserProfile: React.FC = () => {
 
       if (updateError) {
         console.error('Database update error:', updateError);
+        console.error('Database error details:', {
+          message: updateError.message,
+          code: updateError.code,
+          details: updateError.details,
+          hint: updateError.hint
+        });
         throw new Error(`Database error: ${updateError.message}`);
       }
 
@@ -288,18 +302,31 @@ export const UserProfile: React.FC = () => {
   };
 
   const capturePhoto = () => {
-    if (!videoRef) return;
+    if (!videoRef) {
+      console.error('Video ref not available for photo capture');
+      return;
+    }
 
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     
-    if (!context) return;
+    if (!context) {
+      console.error('Canvas context not available for photo capture');
+      return;
+    }
 
     canvas.width = videoRef.videoWidth;
     canvas.height = videoRef.videoHeight;
     
     context.drawImage(videoRef, 0, 0);
     const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    
+    console.log('Photo captured successfully:', {
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+      dataUrlLength: photoDataUrl.length
+    });
+    
     setCapturedPhoto(photoDataUrl);
   };
 
@@ -320,6 +347,9 @@ export const UserProfile: React.FC = () => {
       setUploadingPhoto(true);
       setError(null);
 
+      console.log('=== CAMERA CAPTURE UPLOAD DEBUG ===');
+      console.log('Current user:', currentUser?.id);
+      console.log('Profile ID:', profile.id);
       console.log('Processing captured photo for profile:', profile.id);
 
       // Check if storage bucket exists
@@ -339,9 +369,10 @@ export const UserProfile: React.FC = () => {
       });
 
       // Upload to Supabase Storage
-      const filePath = `${profile.id}/camera-photo.jpg`;
+      const timestamp = Date.now();
+      const filePath = `${profile.id}/camera-photo-${timestamp}.jpg`;
 
-      console.log('Uploading captured photo to storage:', { filePath, bucket: 'profile-photos' });
+      console.log('Uploading captured photo to storage:', { filePath, bucket: 'profile-pictures' });
 
       const { error: uploadError } = await supabase.storage
         .from('profile-pictures')
@@ -352,6 +383,10 @@ export const UserProfile: React.FC = () => {
 
       if (uploadError) {
         console.error('Storage upload error for captured photo:', uploadError);
+        console.error('Captured photo upload error details:', {
+          message: uploadError.message,
+          name: uploadError.name
+        });
         throw new Error(`Storage error: ${uploadError.message}`);
       }
 
@@ -373,6 +408,12 @@ export const UserProfile: React.FC = () => {
 
       if (updateError) {
         console.error('Database update error for captured photo:', updateError);
+        console.error('Captured photo database error details:', {
+          message: updateError.message,
+          code: updateError.code,
+          details: updateError.details,
+          hint: updateError.hint
+        });
         throw new Error(`Database error: ${updateError.message}`);
       }
 
@@ -394,11 +435,46 @@ export const UserProfile: React.FC = () => {
 
   const isOwnProfile = currentUser?.id === id;
 
+  // Debug function to test permissions (can be called from browser console)
+  const testPermissions = async () => {
+    console.log('=== TESTING PERMISSIONS ===');
+    
+    // Test 1: Check current user
+    console.log('Current user:', currentUser?.id);
+    console.log('Profile ID:', profile?.id);
+    console.log('Is own profile:', isOwnProfile);
+    
+    // Test 2: Test storage bucket access
+    try {
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('profile-pictures')
+        .list('', { limit: 1 });
+      console.log('Storage bucket test:', { data: storageData, error: storageError });
+    } catch (error) {
+      console.error('Storage bucket test failed:', error);
+    }
+    
+    // Test 3: Test database access
+    try {
+      const { data: dbData, error: dbError } = await supabase
+        .from('users')
+        .select('id, profile_picture_url')
+        .eq('id', currentUser?.id)
+        .single();
+      console.log('Database access test:', { data: dbData, error: dbError });
+    } catch (error) {
+      console.error('Database access test failed:', error);
+    }
+  };
+
+  // Make test function available globally for debugging
+  (window as any).testProfilePermissions = testPermissions;
+
   // Check and create storage bucket if needed
   const ensureStorageBucket = async () => {
     try {
       // Try to list files in the bucket to check if it exists
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('profile-pictures')
         .list('', { limit: 1 });
 

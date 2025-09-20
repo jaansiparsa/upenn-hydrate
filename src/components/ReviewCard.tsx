@@ -8,6 +8,7 @@ interface ReviewCardProps {
   user?: {
     display_name?: string;
     email?: string;
+    profile_picture_url?: string;
   };
 }
 
@@ -43,7 +44,17 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, user }) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <User className="h-5 w-5 text-gray-400" />
+          <div className="h-5 w-5 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+            {user?.profile_picture_url ? (
+              <img
+                src={user.profile_picture_url}
+                alt={user.display_name || "User"}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="h-3 w-3 text-blue-600" />
+            )}
+          </div>
           <span className="font-medium text-gray-900">{getDisplayName()}</span>
         </div>
         <div className="flex items-center space-x-1 text-sm text-gray-500">

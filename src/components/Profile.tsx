@@ -14,6 +14,7 @@ export const Profile: React.FC = () => {
     email?: string;
     total_ratings: number;
     badges: string[];
+    profile_picture_url?: string;
   } | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -172,8 +173,16 @@ export const Profile: React.FC = () => {
       <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
-            <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="h-8 w-8 text-blue-600" />
+            <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+              {profile?.profile_picture_url ? (
+                <img
+                  src={profile.profile_picture_url}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <User className="h-8 w-8 text-blue-600" />
+              )}
             </div>
             <div className="flex-1">
               {editingName ? (

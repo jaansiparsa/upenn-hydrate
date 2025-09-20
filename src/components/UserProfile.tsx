@@ -13,6 +13,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { Review } from "../services/reviewService";
 import { ReviewItem } from "./ReviewItem";
 import { getUserReviews } from "../services/reviewService";
+import { drinksService } from "../services/drinksService";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -38,6 +39,12 @@ export const UserProfile: React.FC = () => {
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consumptionData, setConsumptionData] = useState<{
+    total_ml: number;
+    total_oz: number;
+    total_drinks: number;
+    bottles_saved: number;
+  } | null>(null);
 
   // Handle vote updates
   const handleVote = (updatedReview: Review) => {
@@ -110,6 +117,10 @@ export const UserProfile: React.FC = () => {
         setReviewsLoading(true);
         const userReviews = await getUserReviews(id);
         setReviews(userReviews);
+
+        // Fetch user consumption data
+        const consumption = await drinksService.getUserTotalConsumption(id);
+        setConsumptionData(consumption);
       } catch (error) {
         console.error("Error fetching profile:", error);
         setError("Failed to load profile");
@@ -453,18 +464,36 @@ export const UserProfile: React.FC = () => {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}
             </div>
-            <div className="text-sm text-gray-600">Total Reviews</div>
+            <div className="text-xs text-gray-600">Reviews</div>
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-yellow-600">
+            <div className="text-2xl font-bold text-yellow-600">
               {averageRating > 0 ? averageRating.toFixed(1) : "N/A"}
             </div>
-            <div className="text-sm text-gray-600">Average Rating</div>
+            <div className="text-xs text-gray-600">Avg Rating</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {consumptionData?.bottles_saved || 0}
+            </div>
+            <div className="text-xs text-gray-600">Bottles Saved</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-600">
+              {profile.followers?.length || 0}
+            </div>
+            <div className="text-xs text-gray-600">Followers</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-indigo-600">
+              {profile.following?.length || 0}
+            </div>
+            <div className="text-xs text-gray-600">Following</div>
           </div>
           <div className="text-center">
             <div className="text-sm text-gray-600">Badges</div>

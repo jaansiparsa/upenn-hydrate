@@ -1,7 +1,6 @@
 import {
   ArrowLeft,
   Calendar,
-  Droplets,
   MapPin,
   Star,
   Users,
@@ -10,6 +9,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
+import { DropletsIcon } from "./DropletsIcon";
 import {
   getPlanDateData,
   type PlanDateData,
@@ -164,7 +164,7 @@ export const PlanDate: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <Droplets className="h-8 w-8 text-pink-600" />
+                <DropletsIcon className="h-8 w-8 text-pink-600" />
               </div>
             </div>
 

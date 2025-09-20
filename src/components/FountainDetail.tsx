@@ -2,7 +2,6 @@ import {
   ArrowLeft,
   Building,
   Coffee,
-  Droplets,
   Layers,
   MapPin,
   Upload,
@@ -13,12 +12,14 @@ import { getFountain, updateFountain } from "../services/fountainService";
 import { useNavigate, useParams } from "react-router-dom";
 
 import type { Fountain } from "../services/fountainService";
+import { DropletsIcon } from "./DropletsIcon";
 import type { Review } from "../services/reviewService";
 import { ReviewForm } from "./ReviewForm";
 import { ReviewItem } from "./ReviewItem";
 import { drinksService } from "../services/drinksService";
 import { getFountainReviews } from "../services/reviewService";
 import { useAuth } from "../contexts/AuthContext";
+import { toast } from "sonner";
 
 export const FountainDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -109,10 +110,14 @@ export const FountainDetail: React.FC = () => {
       setShowStatusModal(false);
 
       // Show success message
-      alert(`Fountain status updated to: ${newStatus.replace("_", " ")}`);
+      toast.success("Fountain Status Updated", {
+        description: `Status changed to: ${newStatus.replace("_", " ")}`,
+      });
     } catch (error) {
       console.error("Error updating fountain status:", error);
-      alert("Failed to update fountain status. Please try again.");
+      toast.error("Failed to update fountain status", {
+        description: "Please try again.",
+      });
     } finally {
       setStatusUpdateLoading(false);
     }
@@ -120,7 +125,7 @@ export const FountainDetail: React.FC = () => {
 
   const handleDrinkLog = async (amountMl: number, drinkType: string) => {
     if (!user || !fountain) {
-      alert("Please log in to track your drinks!");
+      toast.error("Please log in to track your drinks!");
       return;
     }
 
@@ -141,7 +146,9 @@ export const FountainDetail: React.FC = () => {
       });
 
       // Show success message
-      alert(`Successfully logged ${drinkType}!`);
+      toast.success("Drink Logged Successfully", {
+        description: `Successfully logged ${drinkType}!`,
+      });
     } catch (error) {
       console.error("Error logging drink:", error);
       console.error("Error details:", JSON.stringify(error, null, 2));
@@ -149,7 +156,9 @@ export const FountainDetail: React.FC = () => {
       // Show more detailed error message
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
-      alert(`Failed to log drink: ${errorMessage}`);
+      toast.error("Failed to log drink", {
+        description: errorMessage,
+      });
     } finally {
       setDrinkLogging(false);
     }
@@ -230,7 +239,7 @@ export const FountainDetail: React.FC = () => {
             {error || "The fountain you're looking for doesn't exist."}
           </p>
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate(-1)}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -248,7 +257,7 @@ export const FountainDetail: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate(-1)}
               className="inline-flex items-center text-gray-600 hover:text-gray-900"
             >
               <ArrowLeft className="h-5 w-5 mr-2" />
@@ -414,7 +423,7 @@ export const FountainDetail: React.FC = () => {
                   {user && (
                     <div className="mb-4">
                       <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                        <Droplets className="h-4 w-4 mr-1" />
+                        <DropletsIcon className="h-4 w-4 mr-1" />
                         Track Your Hydration
                       </h3>
                       <div className="grid grid-cols-2 gap-2">
@@ -423,7 +432,7 @@ export const FountainDetail: React.FC = () => {
                           disabled={drinkLogging}
                           className="inline-flex items-center justify-center px-3 py-2 border border-blue-300 text-xs font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                         >
-                          <Droplets className="h-3 w-3 mr-1" />1 Second Sip
+                          <DropletsIcon className="h-3 w-3 mr-1" />1 Second Sip
                         </button>
                         <button
                           onClick={() =>

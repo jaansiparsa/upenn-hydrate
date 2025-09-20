@@ -15,6 +15,7 @@ import { FrontPage } from "./components/FrontPage";
 import { PlanDate } from "./components/PlanDate";
 import { UserProfile } from "./components/UserProfile";
 import { supabaseConfig } from "./config/supabase";
+import { Toaster } from "./components/ui/sonner";
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
@@ -98,6 +99,7 @@ function App() {
     <Router>
       <AuthProvider>
         <AppContent />
+        <Toaster />
       </AuthProvider>
     </Router>
   );

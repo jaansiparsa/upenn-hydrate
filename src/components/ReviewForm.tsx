@@ -10,6 +10,7 @@ import type { Review } from "../services/reviewService";
 import { Star } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { checkAndAwardBadges } from "../services/badgeService";
+import { toast } from "sonner";
 
 interface ReviewFormProps {
   fountainId: string;
@@ -177,10 +178,15 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
             review_id: savedReview.id
           });
           
-          // Show badge notifications (you could integrate with a notification system here)
+          // Show badge notifications
           if (newBadges.length > 0) {
             console.log('New badges earned:', newBadges);
-            // You could show a toast notification or badge popup here
+            newBadges.forEach(badge => {
+              toast.success("🎉 New Badge Earned!", {
+                description: `You've earned the "${badge.name}" badge!`,
+                duration: 5000,
+              });
+            });
           }
         } catch (error) {
           console.error('Error checking badges:', error);
@@ -193,7 +199,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       }
 
       // Show success message
-      alert(
+      toast.success(
         isEditing
           ? "Review updated successfully!"
           : "Review submitted successfully!"
@@ -209,11 +215,13 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       if (errorMessage.includes("already has a review")) {
         // User already has a review, switch to edit mode
         setIsEditing(true);
-        setErrors({
-          submit:
-            "You already have a review for this fountain. Your changes will be saved.",
+        toast.info("Review Updated", {
+          description: "You already have a review for this fountain. Your changes will be saved.",
         });
       } else {
+        toast.error("Failed to submit review", {
+          description: errorMessage,
+        });
         setErrors({ submit: errorMessage });
       }
     } finally {

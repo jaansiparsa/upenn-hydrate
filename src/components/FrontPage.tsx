@@ -1,6 +1,7 @@
 import React from 'react';
-import { ArrowRight, Droplets } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { DropletsIcon } from './DropletsIcon';
 
 // Water Drop Component (matching login page)
 const WaterDrop = ({ delay, duration, x, y }: { delay: number; duration: number; x: number; y: number }) => (
@@ -48,7 +49,7 @@ export const FrontPage: React.FC = () => {
           onClick={handleContactUs}
           className="bg-brand-500 hover:bg-brand-600 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 duration-300 hover:shadow hover:scale-105"
         >
-          <Droplets className="h-4 w-4" />
+          <DropletsIcon className="h-4 w-4" />
           Contact Us
           <ArrowRight className="h-4 w-4" />
         </button>
@@ -166,7 +167,7 @@ export const FrontPage: React.FC = () => {
             className="bg-white/90 backdrop-blur-sm text-brand-700 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-white hover:shadow-glow-water transition-all duration-300 hover:scale-105 group border border-white/20"
           >
             <div className="flex items-center">
-              <Droplets className="mr-2 h-5 w-5 text-accent-500" />
+              <DropletsIcon className="mr-2 h-5 w-5 text-accent-500" />
               Get Started
               <ArrowRight className="inline ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform text-accent-600" />
             </div>

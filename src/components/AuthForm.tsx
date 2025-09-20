@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Droplets, Waves } from "lucide-react";
+import { Eye, EyeOff, Waves } from "lucide-react";
 import React, { useState } from "react";
 
 import { useAuth } from "../contexts/AuthContext";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { DropletsIcon } from "./DropletsIcon";
 
 interface AuthFormProps {
   mode: "signin" | "signup";
@@ -226,7 +227,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ mode, onToggleMode }) => {
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   />
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Droplets className="h-4 w-4 text-cyan-500" />
+                    <DropletsIcon className="h-4 w-4 text-cyan-500" />
                   </div>
                   <button
                     type="button"

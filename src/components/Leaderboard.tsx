@@ -1,6 +1,5 @@
 import {
   Award,
-  Droplets,
   Star,
   Trophy,
   Users,
@@ -17,6 +16,7 @@ import {
   type LeaderboardUser,
   type TimeFilter,
 } from "../services/leaderboardService";
+import { DropletsIcon } from "./DropletsIcon";
 
 type LeaderboardTab = "most_hydrated" | "water_influencer" | "best_fountain";
 
@@ -271,7 +271,7 @@ export const Leaderboard: React.FC = () => {
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            <Droplets className="h-4 w-4 mr-2" />
+            <DropletsIcon className="h-4 w-4 mr-2" />
             Most Hydrated
           </button>
           <button

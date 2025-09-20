@@ -1,5 +1,4 @@
 import {
-  Droplets,
   Heart,
   LogOut,
   MapPin,
@@ -24,6 +23,7 @@ import { Leaderboard } from "./Leaderboard";
 import { Map } from "./Map";
 import { Messages } from "./Messages";
 import { useAuth } from "../contexts/AuthContext";
+import { DropletsIcon } from "./DropletsIcon";
 
 export const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -144,7 +144,7 @@ export const Dashboard: React.FC = () => {
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
                 >
-                  <Droplets className="h-4 w-4 mr-1" />
+                  <DropletsIcon className="h-4 w-4 mr-1" />
                   Fountains
                 </button>
                 <button
@@ -245,7 +245,7 @@ export const Dashboard: React.FC = () => {
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
-                  <Droplets className="h-5 w-5 mr-3" />
+                  <DropletsIcon className="h-5 w-5 mr-3" />
                   Fountains
                 </button>
                 <button

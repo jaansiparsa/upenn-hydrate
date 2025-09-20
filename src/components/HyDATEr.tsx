@@ -1,17 +1,10 @@
-import {
-  Calendar,
-  Heart,
-  MessageCircle,
-  Star,
-  User,
-  Users,
-  Zap,
-} from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { Calendar, Heart, MessageCircle, User, Users } from "lucide-react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import type { Match } from "../services/datingService";
 import { getUserMatches } from "../services/datingService";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface HyDATErProps {
   onStartMessage?: (userId: string, userName?: string) => void;
@@ -19,17 +12,12 @@ interface HyDATErProps {
 
 export const HyDATEr: React.FC<HyDATErProps> = ({ onStartMessage }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadMatches();
-    }
-  }, [user]);
-
-  const loadMatches = async () => {
+  const loadMatches = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -42,6 +30,16 @@ export const HyDATEr: React.FC<HyDATErProps> = ({ onStartMessage }) => {
     } finally {
       setLoading(false);
     }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadMatches();
+    }
+  }, [user, loadMatches]);
+
+  const handlePlanDate = (userId: string) => {
+    navigate(`/plan-date/${userId}`);
   };
 
   const formatCompatibilityScore = (score: number) => {
@@ -206,7 +204,10 @@ export const HyDATEr: React.FC<HyDATErProps> = ({ onStartMessage }) => {
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Message
               </button>
-              <button className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors flex items-center justify-center">
+              <button
+                onClick={() => handlePlanDate(match.user_id)}
+                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors flex items-center justify-center"
+              >
                 <Calendar className="h-4 w-4 mr-2" />
                 Plan First Date
               </button>

@@ -10,7 +10,8 @@ import {
   Trophy,
   UserCircle,
 } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { AddFountainForm } from "./AddFountainForm";
 import { Feed } from "./Feed";
@@ -19,11 +20,11 @@ import { Leaderboard } from "./Leaderboard";
 import { Map } from "./Map";
 import { Messages } from "./Messages";
 import { useAuth } from "../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 export const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<
     "fountains" | "feed" | "leaderboard" | "hydater" | "messages" | "profile"
   >("fountains");
@@ -56,6 +57,39 @@ export const Dashboard: React.FC = () => {
       console.error("Error signing out:", error);
     }
   };
+
+  // Handle URL parameters for navigation from PlanDate page
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    const userId = searchParams.get("userId");
+    const userName = searchParams.get("userName");
+
+    if (
+      tab &&
+      [
+        "fountains",
+        "feed",
+        "leaderboard",
+        "hydater",
+        "messages",
+        "profile",
+      ].includes(tab)
+    ) {
+      setActiveTab(
+        tab as
+          | "fountains"
+          | "feed"
+          | "leaderboard"
+          | "hydater"
+          | "messages"
+          | "profile"
+      );
+    }
+
+    if (userId && tab === "messages") {
+      setSelectedMessageUser({ userId, userName: userName || undefined });
+    }
+  }, [searchParams]);
 
   // Show add fountain form if requested
   if (showAddForm) {

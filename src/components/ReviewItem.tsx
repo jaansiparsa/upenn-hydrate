@@ -13,51 +13,72 @@ interface ReviewItemProps {
   showFountainInfo?: boolean;
   onVote?: (updatedReview: Review) => void;
   showComments?: boolean;
+  comments?: RatingComment[];
+  onCommentUpdate?: (comment: RatingComment) => void;
+  onCommentCreated?: (comment: RatingComment) => void;
+  onCommentDelete?: (commentId: string) => void;
 }
 
 export const ReviewItem: React.FC<ReviewItemProps> = ({
   review,
   showFountainInfo = false,
   showComments = false,
+  comments = [],
+  onCommentUpdate,
+  onCommentCreated,
+  onCommentDelete,
 }) => {
   const navigate = useNavigate();
-  const [comments, setComments] = useState<RatingComment[]>([]);
+  const [localComments, setLocalComments] = useState<RatingComment[]>(comments);
   const [loadingComments, setLoadingComments] = useState(false);
   const [showCommentsSection, setShowCommentsSection] = useState(false);
 
+  // Update local comments when props change
+  useEffect(() => {
+    setLocalComments(comments);
+  }, [comments]);
+
   const loadComments = useCallback(async () => {
+    // Only load if we don't have comments already
+    if (localComments.length > 0) return;
+
     setLoadingComments(true);
     try {
       const fetchedComments = await getRatingComments(review.id);
-      setComments(fetchedComments);
+      setLocalComments(fetchedComments);
     } catch (error) {
       console.error("Error loading comments:", error);
     } finally {
       setLoadingComments(false);
     }
-  }, [review.id]);
+  }, [review.id, localComments.length]);
 
   // Load comments when comments section is opened
   useEffect(() => {
-    if (showCommentsSection && comments.length === 0) {
+    if (showCommentsSection && localComments.length === 0) {
       loadComments();
     }
-  }, [showCommentsSection, comments.length, loadComments]);
+  }, [showCommentsSection, localComments.length, loadComments]);
 
   const handleCommentCreated = (newComment: RatingComment) => {
-    setComments((prev) => [...prev, newComment]);
+    setLocalComments((prev) => [...prev, newComment]);
+    onCommentCreated?.(newComment);
   };
 
   const handleCommentUpdate = (updatedComment: RatingComment) => {
-    setComments((prev) =>
+    setLocalComments((prev) =>
       prev.map((comment) =>
         comment.id === updatedComment.id ? updatedComment : comment
       )
     );
+    onCommentUpdate?.(updatedComment);
   };
 
   const handleCommentDelete = (commentId: string) => {
-    setComments((prev) => prev.filter((comment) => comment.id !== commentId));
+    setLocalComments((prev) =>
+      prev.filter((comment) => comment.id !== commentId)
+    );
+    onCommentDelete?.(commentId);
   };
 
   return (
@@ -209,7 +230,7 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
               <MessageCircle className="h-4 w-4" />
               <span>
                 {showCommentsSection ? "Hide" : "Show"} Comments (
-                {comments.length})
+                {localComments.length})
               </span>
             </button>
           </div>
@@ -230,9 +251,9 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
                     Loading comments...
                   </span>
                 </div>
-              ) : comments.length > 0 ? (
+              ) : localComments.length > 0 ? (
                 <div className="space-y-3">
-                  {comments.map((comment) => (
+                  {localComments.map((comment) => (
                     <CommentCard
                       key={comment.id}
                       comment={comment}

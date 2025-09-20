@@ -1,20 +1,12 @@
-import {
-  ArrowLeft,
-  Building,
-  Calendar,
-  Layers,
-  MapPin,
-  Upload,
-  X,
-} from "lucide-react";
+import { ArrowLeft, Building, Layers, MapPin, Upload, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { getFountain, updateFountain } from "../services/fountainService";
 import { useNavigate, useParams } from "react-router-dom";
 
 import type { Fountain } from "../services/fountainService";
 import type { Review } from "../services/reviewService";
-import { ReviewCard } from "./ReviewCard";
 import { ReviewForm } from "./ReviewForm";
+import { ReviewItem } from "./ReviewItem";
 import { getFountainReviews } from "../services/reviewService";
 
 export const FountainDetail: React.FC = () => {
@@ -329,7 +321,7 @@ export const FountainDetail: React.FC = () => {
                     {/* Status Details */}
                     <div className="bg-gray-50 rounded-lg p-3">
                       <h3 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                        <Calendar className="h-4 w-4 mr-1" />
+                        <Building className="h-4 w-4 mr-1" />
                         Info
                       </h3>
                       <div className="space-y-1 text-xs">
@@ -416,12 +408,12 @@ export const FountainDetail: React.FC = () => {
                 <span className="ml-2 text-gray-600">Loading reviews...</span>
               </div>
             ) : reviews.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {reviews.map((review) => (
-                  <ReviewCard
+                  <ReviewItem
                     key={review.id}
                     review={review}
-                    user={review.users}
+                    showFountainInfo={false}
                   />
                 ))}
               </div>

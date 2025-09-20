@@ -10,12 +10,14 @@ import {
 import React, { useState } from "react";
 
 import { AddFountainForm } from "./AddFountainForm";
+import { Feed } from "./Feed";
 import { Map } from "./Map";
-import { Profile } from "./Profile";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<"fountains" | "feed" | "profile">(
     "fountains"
   );
@@ -86,7 +88,7 @@ export const Dashboard: React.FC = () => {
                   Feed
                 </button>
                 <button
-                  onClick={() => setActiveTab("profile")}
+                  onClick={() => navigate(`/user/${user?.id}`)}
                   className={`py-2 px-3 border-b-2 font-medium text-sm flex items-center ${
                     activeTab === "profile"
                       ? "border-blue-500 text-blue-600"
@@ -119,7 +121,7 @@ export const Dashboard: React.FC = () => {
               {/* Welcome Section */}
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Welcome back, {user?.email?.split("@")[0]}!
+                  Campus Water Fountains
                 </h2>
                 <p className="text-gray-600">
                   Explore water fountains around Penn's campus.
@@ -159,26 +161,7 @@ export const Dashboard: React.FC = () => {
             </>
           )}
 
-          {activeTab === "feed" && (
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="flex items-center mb-4">
-                <Rss className="h-5 w-5 text-blue-600 mr-2" />
-                <h2 className="text-xl font-bold text-gray-900">Feed</h2>
-              </div>
-              <div className="text-center py-12">
-                <Rss className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Feed Coming Soon
-                </h3>
-                <p className="text-gray-600">
-                  Stay tuned for updates about water fountains and campus
-                  activities.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "profile" && <Profile />}
+          {activeTab === "feed" && <Feed />}
         </div>
       </main>
     </div>

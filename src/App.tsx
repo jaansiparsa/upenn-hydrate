@@ -12,6 +12,7 @@ import { ConfigurationError } from "./components/ConfigurationError";
 import { Dashboard } from "./components/Dashboard";
 import { FountainDetail } from "./components/FountainDetail";
 import { FrontPage } from "./components/FrontPage";
+import { UserProfile } from "./components/UserProfile";
 import { supabaseConfig } from "./config/supabase";
 
 const AppContent: React.FC = () => {
@@ -68,6 +69,12 @@ const AppContent: React.FC = () => {
         path="/fountain/:id" 
         element={
           user ? <FountainDetail /> : <Navigate to="/login" replace />
+        } 
+      />
+      <Route 
+        path="/user/:id" 
+        element={
+          user ? <UserProfile /> : <Navigate to="/login" replace />
         } 
       />
       <Route path="*" element={<Navigate to="/" replace />} />

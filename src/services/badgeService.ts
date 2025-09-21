@@ -468,6 +468,31 @@ const checkCountRequirement = async (
   return false;
 };
 
+// Helper function to calculate streak
+const calculateStreak = (dates: Date[]): number => {
+  if (dates.length === 0) return 0;
+
+  let streak = 1;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let i = 1; i < dates.length; i++) {
+    const currentDate = new Date(dates[i]);
+    currentDate.setHours(0, 0, 0, 0);
+
+    const expectedDate = new Date(today);
+    expectedDate.setDate(today.getDate() - i);
+
+    if (currentDate.getTime() === expectedDate.getTime()) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+};
+
 // Check streak-based requirements
 const checkStreakRequirement = async (
   userId: string,

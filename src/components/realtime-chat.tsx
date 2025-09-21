@@ -13,6 +13,7 @@ interface RealtimeChatProps {
   messages?: ChatMessage[]
   otherUserId: string
   otherUserName?: string
+  otherUserProfilePictureUrl?: string
   onBack?: () => void
 }
 
@@ -24,6 +25,7 @@ export const RealtimeChat = ({
   messages: initialMessages = [],
   otherUserId,
   otherUserName,
+  otherUserProfilePictureUrl,
   onBack
 }: RealtimeChatProps) => {
   const [newMessage, setNewMessage] = useState('')
@@ -101,10 +103,18 @@ export const RealtimeChat = ({
             </svg>
           </button>
         )}
-        <div className="h-10 w-10 bg-pink-100 rounded-full flex items-center justify-center">
-          <svg className="h-5 w-5 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
+        <div className="h-10 w-10 bg-pink-100 rounded-full flex items-center justify-center overflow-hidden">
+          {otherUserProfilePictureUrl ? (
+            <img
+              src={otherUserProfilePictureUrl}
+              alt={otherUserName || "User"}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-sm font-medium text-pink-600">
+              {otherUserName?.charAt(0) || "U"}
+            </span>
+          )}
         </div>
         <div>
           <h2 className="font-semibold text-gray-900">

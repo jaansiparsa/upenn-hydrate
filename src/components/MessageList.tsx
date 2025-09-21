@@ -1,4 +1,4 @@
-import { MessageCircle, User } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import type { Conversation } from "../services/messagingService";
@@ -6,7 +6,7 @@ import { getConversations } from "../services/messagingService";
 import { useNavigate } from "react-router-dom";
 
 interface MessageListProps {
-  onSelectConversation: (userId: string, userName?: string) => void;
+  onSelectConversation: (userId: string, userName?: string, profilePictureUrl?: string) => void;
   selectedUserId?: string;
 }
 
@@ -109,7 +109,8 @@ export const MessageList: React.FC<MessageListProps> = ({
           onClick={() =>
             onSelectConversation(
               conversation.user_id,
-              conversation.display_name
+              conversation.display_name,
+              conversation.profile_picture_url
             )
           }
           className={`p-4 rounded-lg cursor-pointer transition-colors ${
@@ -119,8 +120,20 @@ export const MessageList: React.FC<MessageListProps> = ({
           }`}
         >
           <div className="flex items-center space-x-3">
-            <div className="h-12 w-12 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <User className="h-6 w-6 text-pink-600" />
+            <div className="h-12 w-12 bg-pink-100 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {conversation.profile_picture_url ? (
+                <img
+                  src={conversation.profile_picture_url}
+                  alt={conversation.display_name || "User"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-sm font-medium text-pink-600">
+                  {conversation.display_name?.charAt(0) ||
+                    conversation.email?.charAt(0) ||
+                    "U"}
+                </span>
+              )}
             </div>
 
             <div className="flex-1 min-w-0">

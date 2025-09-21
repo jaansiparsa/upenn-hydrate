@@ -146,19 +146,6 @@ export const Profile: React.FC = () => {
     return totalRating / reviews.length;
   };
 
-  const getBadgeDisplay = (badges: string[]) => {
-    if (!badges || badges.length === 0) return "No badges yet";
-
-    const badgeMap: Record<string, string> = {
-      new_reviewer: "New Reviewer",
-      frequent_reviewer: "Frequent Reviewer",
-      quality_reviewer: "Quality Reviewer",
-      helpful_reviewer: "Helpful Reviewer",
-    };
-
-    return badges.map((badge) => badgeMap[badge] || badge).join(", ");
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">

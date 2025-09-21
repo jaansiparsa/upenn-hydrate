@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 import type { Review } from "../services/reviewService";
 import { ReviewCard } from "./ReviewCard";
+import { BadgeDisplay } from "./BadgeDisplay";
 import { drinksService } from "../services/drinksService";
 import { getUserReviews } from "../services/reviewService";
 import { supabase } from "../lib/supabase";
@@ -174,18 +175,6 @@ export const Profile: React.FC = () => {
     return totalRating / reviews.length;
   };
 
-  const getBadgeDisplay = (badges: string[]) => {
-    if (!badges || badges.length === 0) return "No badges yet";
-
-    const badgeMap: Record<string, string> = {
-      new_reviewer: "New Reviewer",
-      frequent_reviewer: "Frequent Reviewer",
-      quality_reviewer: "Quality Reviewer",
-      helpful_reviewer: "Helpful Reviewer",
-    };
-
-    return badges.map((badge) => badgeMap[badge] || badge).join(", ");
-  };
 
   // Fetch followers list
   const fetchFollowersList = async () => {
@@ -361,7 +350,7 @@ export const Profile: React.FC = () => {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}
@@ -380,18 +369,19 @@ export const Profile: React.FC = () => {
             </div>
             <div className="text-xs text-gray-600">Bottles Saved</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {profile.followers?.length || 0}
-            </div>
-            <div className="text-xs text-gray-600">Followers</div>
+        </div>
+
+        {/* Quick Badge Preview */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700">Recent Badges</h3>
+            <span className="text-xs text-gray-500">View all badges below</span>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-indigo-600">
-              {profile.following?.length || 0}
-            </div>
-            <div className="text-xs text-gray-600">Following</div>
-          </div>
+          <BadgeDisplay
+            userId={profile.id}
+            showProgress={false}
+            compact={true}
+          />
         </div>
       </div>
 

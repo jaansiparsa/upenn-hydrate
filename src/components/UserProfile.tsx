@@ -1075,7 +1075,7 @@ export const UserProfile: React.FC = () => {
         )}
 
         {/* Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 justify-items-center">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 justify-items-center">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}
@@ -1093,18 +1093,6 @@ export const UserProfile: React.FC = () => {
               {consumptionData?.bottles_saved || 0}
             </div>
             <div className="text-xs text-gray-600">Bottles Saved</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {profile.followers?.length || 0}
-            </div>
-            <div className="text-xs text-gray-600">Followers</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-indigo-600">
-              {profile.following?.length || 0}
-            </div>
-            <div className="text-xs text-gray-600">Following</div>
           </div>
         </div>
 

@@ -24,22 +24,25 @@ import { checkAndAwardBadges } from "../services/badgeService";
 import { drinksService } from "../services/drinksService";
 import { getUserReviews } from "../services/reviewService";
 import { supabase } from "../lib/supabase";
+import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
+
+type UserProfileType = {
+  id: string;
+  display_name?: string;
+  email?: string;
+  total_ratings: number;
+  followers: string[];
+  following: string[];
+  profile_picture_url?: string;
+};
 
 export const UserProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [profile, setProfile] = useState<{
-    id: string;
-    display_name?: string;
-    email?: string;
-    total_ratings: number;
-    followers: string[];
-    following: string[];
-    profile_picture_url?: string;
-  } | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfileType | null>(null);
+  const [profile, setProfile] = useState<UserProfileType | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -48,7 +51,7 @@ export const UserProfile: React.FC = () => {
   const [updating, setUpdating] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  
+
   const [error, setError] = useState<string | null>(null);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
@@ -75,8 +78,7 @@ export const UserProfile: React.FC = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-  const { notifications, showBadgeEarned, removeNotification } =
-    useBadgeNotifications();
+  const { notifications, removeNotification } = useBadgeNotifications();
   const [consumptionData, setConsumptionData] = useState<{
     total_ml: number;
     total_oz: number;
@@ -264,7 +266,7 @@ export const UserProfile: React.FC = () => {
       console.log("Profile update successful");
 
       // Update local state
-      setProfile((prev) =>
+      setProfile((prev: UserProfileType | null) =>
         prev ? { ...prev, profile_picture_url: data.publicUrl } : null
       );
       setPhotoPreview(null);
@@ -303,7 +305,7 @@ export const UserProfile: React.FC = () => {
       if (updateError) throw updateError;
 
       // Update local state
-      setProfile((prev) =>
+      setProfile((prev: UserProfileType | null) =>
         prev ? { ...prev, profile_picture_url: undefined } : null
       );
     } catch (error) {
@@ -464,7 +466,7 @@ export const UserProfile: React.FC = () => {
       console.log("Captured photo profile update successful");
 
       // Update local state
-      setProfile((prev) =>
+      setProfile((prev: UserProfileType | null) =>
         prev ? { ...prev, profile_picture_url: data.publicUrl } : null
       );
 
@@ -569,12 +571,15 @@ export const UserProfile: React.FC = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       if (!id) {
-        console.log("UserProfile: No user ID found, skipping fetch");
+        console.log("UserProfileType: No user ID found, skipping fetch");
         return;
       }
 
       try {
-        console.log("UserProfile: Starting to fetch profile for user ID:", id);
+        console.log(
+          "UserProfileType: Starting to fetch profile for user ID:",
+          id
+        );
         setLoading(true);
 
         // Fetch user profile
@@ -585,9 +590,9 @@ export const UserProfile: React.FC = () => {
           .single();
 
         if (profileError) {
-          console.log("UserProfile: Profile error:", profileError);
+          console.log("UserProfileType: Profile error:", profileError);
           if (profileError.code === "PGRST116") {
-            console.log("UserProfile: User not found in database");
+            console.log("UserProfileType: User not found in database");
             setError("User not found");
             setLoading(false);
             return;
@@ -596,7 +601,7 @@ export const UserProfile: React.FC = () => {
         }
 
         if (profileData) {
-          console.log("UserProfile: Profile data found:", profileData);
+          console.log("UserProfileType: Profile data found:", profileData);
           setProfile(profileData);
           setNewDisplayName(profileData.display_name || "");
 
@@ -615,7 +620,7 @@ export const UserProfile: React.FC = () => {
         console.error("Error fetching profile:", error);
         setError("Failed to load profile");
       } finally {
-        console.log("UserProfile: Setting loading to false");
+        console.log("UserProfileType: Setting loading to false");
         setLoading(false);
         setReviewsLoading(false);
       }
@@ -634,14 +639,14 @@ export const UserProfile: React.FC = () => {
             .select("*")
             .eq("id", authUser.id)
             .single();
-          
+
           if (error) throw error;
           setCurrentUser(data);
         } catch (error) {
           console.error("Error fetching current user:", error);
         }
       };
-      
+
       fetchCurrentUser();
     } else {
       setCurrentUser(null);
@@ -651,7 +656,8 @@ export const UserProfile: React.FC = () => {
   // Simple follow state check when profile loads
   useEffect(() => {
     if (currentUser && profile && !isOwnProfile) {
-      const isCurrentlyFollowing = currentUser.following?.includes(profile.id) || false;
+      const isCurrentlyFollowing =
+        currentUser.following?.includes(profile.id) || false;
       setIsFollowing(isCurrentlyFollowing);
     } else {
       setIsFollowing(false);
@@ -670,7 +676,7 @@ export const UserProfile: React.FC = () => {
 
       if (error) throw error;
 
-      setProfile((prev) =>
+      setProfile((prev: UserProfileType | null) =>
         prev ? { ...prev, display_name: newDisplayName } : null
       );
       setEditingName(false);
@@ -682,66 +688,76 @@ export const UserProfile: React.FC = () => {
     }
   };
 
-
   const handleFollow = async () => {
     if (!currentUser || !profile || isOwnProfile) return;
 
     setFollowLoading(true);
-    
+
     try {
       if (isFollowing) {
         // Unfollow: Remove from both arrays
-        const newFollowers = profile.followers?.filter(id => id !== currentUser.id) || [];
-        const newFollowing = currentUser.following?.filter(id => id !== profile.id) || [];
-        
+        const newFollowers =
+          profile.followers?.filter((id: string) => id !== currentUser.id) ||
+          [];
+        const newFollowing =
+          currentUser.following?.filter((id: string) => id !== profile.id) ||
+          [];
+
         // Update profile's followers
         const { error: profileError } = await supabase
           .from("users")
           .update({ followers: newFollowers })
           .eq("id", profile.id);
-        
+
         if (profileError) throw profileError;
-        
+
         // Update current user's following
         const { error: userError } = await supabase
           .from("users")
           .update({ following: newFollowing })
           .eq("id", currentUser.id);
-        
+
         if (userError) throw userError;
-        
+
         // Update local state
         setIsFollowing(false);
-        setProfile(prev => prev ? { ...prev, followers: newFollowers } : null);
-        setCurrentUser(prev => prev ? { ...prev, following: newFollowing } : null);
-        
+        setProfile((prev: UserProfileType | null) =>
+          prev ? { ...prev, followers: newFollowers } : null
+        );
+        setCurrentUser((prev: UserProfileType | null) =>
+          prev ? { ...prev, following: newFollowing } : null
+        );
       } else {
         // Follow: Add to both arrays
         const newFollowers = [...(profile.followers || []), currentUser.id];
         const newFollowing = [...(currentUser.following || []), profile.id];
-        
+
         // Update profile's followers
         const { error: profileError } = await supabase
           .from("users")
           .update({ followers: newFollowers })
           .eq("id", profile.id);
-        
+
         if (profileError) throw profileError;
-        
+
         // Update current user's following
         const { error: userError } = await supabase
           .from("users")
           .update({ following: newFollowing })
           .eq("id", currentUser.id);
-        
+
         if (userError) throw userError;
-        
+
         // Update local state
         setIsFollowing(true);
-        setProfile(prev => prev ? { ...prev, followers: newFollowers } : null);
-        setCurrentUser(prev => prev ? { ...prev, following: newFollowing } : null);
+        setProfile((prev: UserProfileType | null) =>
+          prev ? { ...prev, followers: newFollowers } : null
+        );
+        setCurrentUser((prev: UserProfileType | null) =>
+          prev ? { ...prev, following: newFollowing } : null
+        );
       }
-      
+
       // Check for new badges
       if (currentUser) {
         const newBadges = await checkAndAwardBadges(
@@ -751,22 +767,21 @@ export const UserProfile: React.FC = () => {
         );
         if (newBadges.length > 0) {
           newBadges.forEach((badgeName) => {
-            toast.success(`You earned the ${badgeName} badge!`, "bronze");
+            toast.success(`You earned the ${badgeName} badge!`);
           });
-          
+
           // Refresh current user data to show new badges
           const { data: refreshedUser } = await supabase
             .from("users")
             .select("*")
             .eq("id", currentUser.id)
             .single();
-          
+
           if (refreshedUser) {
             setCurrentUser(refreshedUser);
           }
         }
       }
-      
     } catch (error) {
       console.error("Error updating follow status:", error);
       setError("Failed to update follow status");

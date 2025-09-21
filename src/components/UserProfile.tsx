@@ -27,20 +27,22 @@ import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 
+type UserProfileType = {
+  id: string;
+  display_name?: string;
+  email?: string;
+  total_ratings: number;
+  followers: string[];
+  following: string[];
+  profile_picture_url?: string;
+};
+
 export const UserProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user: authUser } = useAuth();
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [profile, setProfile] = useState<{
-    id: string;
-    display_name?: string;
-    email?: string;
-    total_ratings: number;
-    followers: string[];
-    following: string[];
-    profile_picture_url?: string;
-  } | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserProfileType | null>(null);
+  const [profile, setProfile] = useState<UserProfileType | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -264,7 +266,7 @@ export const UserProfile: React.FC = () => {
       console.log("Profile update successful");
 
       // Update local state
-      setProfile((prev) =>
+      setProfile((prev: UserProfileType | null) =>
         prev ? { ...prev, profile_picture_url: data.publicUrl } : null
       );
       setPhotoPreview(null);
@@ -303,7 +305,7 @@ export const UserProfile: React.FC = () => {
       if (updateError) throw updateError;
 
       // Update local state
-      setProfile((prev) =>
+      setProfile((prev: UserProfileType | null) =>
         prev ? { ...prev, profile_picture_url: undefined } : null
       );
     } catch (error) {
@@ -464,7 +466,7 @@ export const UserProfile: React.FC = () => {
       console.log("Captured photo profile update successful");
 
       // Update local state
-      setProfile((prev) =>
+      setProfile((prev: UserProfileType | null) =>
         prev ? { ...prev, profile_picture_url: data.publicUrl } : null
       );
 
@@ -569,12 +571,15 @@ export const UserProfile: React.FC = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       if (!id) {
-        console.log("UserProfile: No user ID found, skipping fetch");
+        console.log("UserProfileType: No user ID found, skipping fetch");
         return;
       }
 
       try {
-        console.log("UserProfile: Starting to fetch profile for user ID:", id);
+        console.log(
+          "UserProfileType: Starting to fetch profile for user ID:",
+          id
+        );
         setLoading(true);
 
         // Fetch user profile
@@ -585,9 +590,9 @@ export const UserProfile: React.FC = () => {
           .single();
 
         if (profileError) {
-          console.log("UserProfile: Profile error:", profileError);
+          console.log("UserProfileType: Profile error:", profileError);
           if (profileError.code === "PGRST116") {
-            console.log("UserProfile: User not found in database");
+            console.log("UserProfileType: User not found in database");
             setError("User not found");
             setLoading(false);
             return;
@@ -596,7 +601,7 @@ export const UserProfile: React.FC = () => {
         }
 
         if (profileData) {
-          console.log("UserProfile: Profile data found:", profileData);
+          console.log("UserProfileType: Profile data found:", profileData);
           setProfile(profileData);
           setNewDisplayName(profileData.display_name || "");
 
@@ -615,7 +620,7 @@ export const UserProfile: React.FC = () => {
         console.error("Error fetching profile:", error);
         setError("Failed to load profile");
       } finally {
-        console.log("UserProfile: Setting loading to false");
+        console.log("UserProfileType: Setting loading to false");
         setLoading(false);
         setReviewsLoading(false);
       }
@@ -671,7 +676,7 @@ export const UserProfile: React.FC = () => {
 
       if (error) throw error;
 
-      setProfile((prev) =>
+      setProfile((prev: UserProfileType | null) =>
         prev ? { ...prev, display_name: newDisplayName } : null
       );
       setEditingName(false);
@@ -692,7 +697,8 @@ export const UserProfile: React.FC = () => {
       if (isFollowing) {
         // Unfollow: Remove from both arrays
         const newFollowers =
-          profile.followers?.filter((id) => id !== currentUser.id) || [];
+          profile.followers?.filter((id: string) => id !== currentUser.id) ||
+          [];
         const newFollowing =
           currentUser.following?.filter((id: string) => id !== profile.id) ||
           [];
@@ -715,10 +721,17 @@ export const UserProfile: React.FC = () => {
 
         // Update local state
         setIsFollowing(false);
+<<<<<<< HEAD
         setProfile((prev) =>
           prev ? { ...prev, followers: newFollowers } : null
         );
         setCurrentUser((prev: any) =>
+=======
+        setProfile((prev: UserProfileType | null) =>
+          prev ? { ...prev, followers: newFollowers } : null
+        );
+        setCurrentUser((prev: UserProfileType | null) =>
+>>>>>>> main
           prev ? { ...prev, following: newFollowing } : null
         );
       } else {
@@ -744,10 +757,10 @@ export const UserProfile: React.FC = () => {
 
         // Update local state
         setIsFollowing(true);
-        setProfile((prev) =>
+        setProfile((prev: UserProfileType | null) =>
           prev ? { ...prev, followers: newFollowers } : null
         );
-        setCurrentUser((prev: any) =>
+        setCurrentUser((prev: UserProfileType | null) =>
           prev ? { ...prev, following: newFollowing } : null
         );
       }

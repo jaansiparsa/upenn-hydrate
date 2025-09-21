@@ -11,6 +11,8 @@ export interface Review {
   yum_factor: number;
   comment?: string;
   created_at?: string;
+  upvotes?: string[];
+  downvotes?: string[];
   users?: {
     display_name?: string;
     email?: string;
@@ -451,4 +453,203 @@ export const testRatingsTable = async (): Promise<void> => {
     console.error("Error testing ratings table:", error);
     throw error;
   }
+};
+
+// Voting functions
+export const upvoteReview = async (reviewId: string): Promise<Review> => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("User must be authenticated to vote");
+  }
+
+  // Get current review data
+  const { data: review, error: fetchError } = await supabase
+    .from("ratings")
+    .select("upvotes, downvotes")
+    .eq("id", reviewId)
+    .single();
+
+  if (fetchError) {
+    console.error("Error fetching review:", fetchError);
+    throw fetchError;
+  }
+
+  const currentUpvotes = review.upvotes || [];
+  const currentDownvotes = review.downvotes || [];
+
+  // Check if user already upvoted
+  if (currentUpvotes.includes(user.id)) {
+    // Remove upvote
+    const newUpvotes = currentUpvotes.filter((id: string) => id !== user.id);
+    const { data, error } = await supabase
+      .from("ratings")
+      .update({ upvotes: newUpvotes })
+      .eq("id", reviewId)
+      .select(
+        `
+      *,
+      users:user_id (
+        display_name,
+        email,
+        profile_picture_url
+      ),
+      fountains:fountain_id (
+        name,
+        building,
+        floor
+      )
+    `
+      )
+      .single();
+
+    if (error) {
+      console.error("Error removing upvote:", error);
+      throw error;
+    }
+
+    return data as Review;
+  }
+
+  // Check if user downvoted, remove from downvotes first
+  let newDownvotes = currentDownvotes;
+  if (currentDownvotes.includes(user.id)) {
+    newDownvotes = currentDownvotes.filter((id: string) => id !== user.id);
+  }
+
+  // Add upvote
+  const newUpvotes = [...currentUpvotes, user.id];
+
+  const { data, error } = await supabase
+    .from("ratings")
+    .update({
+      upvotes: newUpvotes,
+      downvotes: newDownvotes,
+    })
+    .eq("id", reviewId)
+    .select(
+      `
+      *,
+      users:user_id (
+        display_name,
+        email,
+        profile_picture_url
+      ),
+      fountains:fountain_id (
+        name,
+        building,
+        floor
+      )
+    `
+    )
+    .single();
+
+  if (error) {
+    console.error("Error adding upvote:", error);
+    throw error;
+  }
+
+  return data as Review;
+};
+
+export const downvoteReview = async (reviewId: string): Promise<Review> => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("User must be authenticated to vote");
+  }
+
+  // Get current review data
+  const { data: review, error: fetchError } = await supabase
+    .from("ratings")
+    .select("upvotes, downvotes")
+    .eq("id", reviewId)
+    .single();
+
+  if (fetchError) {
+    console.error("Error fetching review:", fetchError);
+    throw fetchError;
+  }
+
+  const currentUpvotes = review.upvotes || [];
+  const currentDownvotes = review.downvotes || [];
+
+  // Check if user already downvoted
+  if (currentDownvotes.includes(user.id)) {
+    // Remove downvote
+    const newDownvotes = currentDownvotes.filter(
+      (id: string) => id !== user.id
+    );
+    const { data, error } = await supabase
+      .from("ratings")
+      .update({ downvotes: newDownvotes })
+      .eq("id", reviewId)
+      .select(
+        `
+      *,
+      users:user_id (
+        display_name,
+        email,
+        profile_picture_url
+      ),
+      fountains:fountain_id (
+        name,
+        building,
+        floor
+      )
+    `
+      )
+      .single();
+
+    if (error) {
+      console.error("Error removing downvote:", error);
+      throw error;
+    }
+
+    return data as Review;
+  }
+
+  // Check if user upvoted, remove from upvotes first
+  let newUpvotes = currentUpvotes;
+  if (currentUpvotes.includes(user.id)) {
+    newUpvotes = currentUpvotes.filter((id: string) => id !== user.id);
+  }
+
+  // Add downvote
+  const newDownvotes = [...currentDownvotes, user.id];
+
+  const { data, error } = await supabase
+    .from("ratings")
+    .update({
+      upvotes: newUpvotes,
+      downvotes: newDownvotes,
+    })
+    .eq("id", reviewId)
+    .select(
+      `
+      *,
+      users:user_id (
+        display_name,
+        email,
+        profile_picture_url
+      ),
+      fountains:fountain_id (
+        name,
+        building,
+        floor
+      )
+    `
+    )
+    .single();
+
+  if (error) {
+    console.error("Error adding downvote:", error);
+    throw error;
+  }
+
+  return data as Review;
 };

@@ -11,6 +11,13 @@ import { Star } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 
+// Type for Supabase real-time payload
+interface SupabaseRealtimePayload {
+  new?: Review;
+  old?: Review;
+  eventType?: string;
+}
+
 interface ReviewFormProps {
   fountainId: string;
   onSubmit?: (review: ReviewData) => void;
@@ -75,14 +82,15 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     const subscription = subscribeToReviews(fountainId, (payload) => {
       console.log("Real-time review update:", payload);
       // Reload the review if it's the current user's review
-      if (payload.new && payload.new.user_id === user.id) {
-        setExistingReview(payload.new as Review);
+      const typedPayload = payload as SupabaseRealtimePayload;
+      if (typedPayload.new && typedPayload.new.user_id === user.id) {
+        setExistingReview(typedPayload.new);
         setFormData({
-          coldness: (payload.new as Review).coldness,
-          experience: (payload.new as Review).experience,
-          pressure: (payload.new as Review).pressure,
-          yumFactor: (payload.new as Review).yum_factor,
-          comments: (payload.new as Review).comment || "",
+          coldness: typedPayload.new.coldness,
+          experience: typedPayload.new.experience,
+          pressure: typedPayload.new.pressure,
+          yumFactor: typedPayload.new.yum_factor,
+          comments: typedPayload.new.comment || "",
         });
         setIsEditing(true);
       }

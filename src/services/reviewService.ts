@@ -249,7 +249,7 @@ export const subscribeToReviews = (
   return supabase
     .channel(`ratings_changes_${fountainId}`)
     .on(
-      "postgres_changes",
+      "postgres_changes" as any,
       {
         event: "*",
         schema: "public",

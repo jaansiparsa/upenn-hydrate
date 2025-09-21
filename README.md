@@ -1,6 +1,6 @@
 # Hydrate
 
-Changing the water fountain experience at Penn!
+Find your perfect water match!
 
 ## Features
 

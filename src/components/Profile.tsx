@@ -14,6 +14,7 @@ export const Profile: React.FC = () => {
     display_name?: string;
     email?: string;
     total_ratings: number;
+    badges: string[];
     profile_picture_url?: string;
     followers: string[];
     following: string[];
@@ -68,6 +69,7 @@ export const Profile: React.FC = () => {
                   user.email?.split("@")[0] ||
                   "User",
                 total_ratings: 0,
+                badges: [],
                 followers: [],
                 following: [],
               },
@@ -142,6 +144,19 @@ export const Profile: React.FC = () => {
     }, 0);
 
     return totalRating / reviews.length;
+  };
+
+  const getBadgeDisplay = (badges: string[]) => {
+    if (!badges || badges.length === 0) return "No badges yet";
+
+    const badgeMap: Record<string, string> = {
+      new_reviewer: "New Reviewer",
+      frequent_reviewer: "Frequent Reviewer",
+      quality_reviewer: "Quality Reviewer",
+      helpful_reviewer: "Helpful Reviewer",
+    };
+
+    return badges.map((badge) => badgeMap[badge] || badge).join(", ");
   };
 
   if (loading) {
@@ -235,7 +250,7 @@ export const Profile: React.FC = () => {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}

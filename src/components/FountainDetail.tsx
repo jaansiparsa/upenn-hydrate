@@ -7,19 +7,24 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { getFountain, updateFountain } from "../services/fountainService";
+import {
+  getFountainReviews,
+  testRatingsTable,
+} from "../services/reviewService";
 import { useNavigate, useParams } from "react-router-dom";
 
-import type { Fountain } from "../services/fountainService";
 import { DropletsIcon } from "./DropletsIcon";
+import type { Fountain } from "../services/fountainService";
+import type { RatingComment } from "../services/commentService";
 import type { Review } from "../services/reviewService";
 import { ReviewForm } from "./ReviewForm";
 import { ReviewItem } from "./ReviewItem";
 import { drinksService } from "../services/drinksService";
-import { getFountainReviews } from "../services/reviewService";
-import { useAuth } from "../contexts/AuthContext";
+import { getRatingComments } from "../services/commentService";
 import { toast } from "sonner";
+import { useAuth } from "../contexts/AuthContext";
 
 export const FountainDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +39,9 @@ export const FountainDetail: React.FC = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [drinkLogging, setDrinkLogging] = useState(false);
+  const [commentsMap, setCommentsMap] = useState<
+    Record<string, RatingComment[]>
+  >({});
 
   // Handle vote updates
   const handleVote = (updatedReview: Review) => {
@@ -42,6 +50,81 @@ export const FountainDetail: React.FC = () => {
         review.id === updatedReview.id ? updatedReview : review
       )
     );
+  };
+
+  // Load comments for all reviews
+  const loadCommentsForReviews = async (reviewsToLoad: Review[]) => {
+    if (reviewsToLoad.length === 0) return;
+
+    console.log(
+      "FountainDetail: Loading comments for reviews:",
+      reviewsToLoad.map((r) => r.id)
+    );
+
+    try {
+      const commentsPromises = reviewsToLoad.map(async (review) => {
+        try {
+          console.log(
+            `FountainDetail: Loading comments for review ${review.id}`
+          );
+          const comments = await getRatingComments(review.id);
+          console.log(
+            `FountainDetail: Loaded ${comments.length} comments for review ${review.id}`
+          );
+          return { reviewId: review.id, comments };
+        } catch (error) {
+          console.error(
+            `Error loading comments for review ${review.id}:`,
+            error
+          );
+          return { reviewId: review.id, comments: [] };
+        }
+      });
+
+      const commentsResults = await Promise.all(commentsPromises);
+
+      const newCommentsMap: Record<string, RatingComment[]> = {};
+      commentsResults.forEach(({ reviewId, comments }) => {
+        newCommentsMap[reviewId] = comments;
+      });
+
+      console.log("FountainDetail: Comments map updated:", newCommentsMap);
+      setCommentsMap((prev) => ({ ...prev, ...newCommentsMap }));
+    } catch (error) {
+      console.error("Error loading comments:", error);
+    }
+  };
+
+  // Handle comment updates
+  const handleCommentUpdate = (
+    reviewId: string,
+    updatedComment: RatingComment
+  ) => {
+    setCommentsMap((prev) => ({
+      ...prev,
+      [reviewId]:
+        prev[reviewId]?.map((comment) =>
+          comment.id === updatedComment.id ? updatedComment : comment
+        ) || [],
+    }));
+  };
+
+  const handleCommentCreated = (
+    reviewId: string,
+    newComment: RatingComment
+  ) => {
+    setCommentsMap((prev) => ({
+      ...prev,
+      [reviewId]: [...(prev[reviewId] || []), newComment],
+    }));
+  };
+
+  const handleCommentDelete = (reviewId: string, commentId: string) => {
+    setCommentsMap((prev) => ({
+      ...prev,
+      [reviewId]:
+        prev[reviewId]?.filter((comment) => comment.id !== commentId) || [],
+    }));
   };
 
   const handleReviewSubmit = async (reviewData: {
@@ -60,17 +143,24 @@ export const FountainDetail: React.FC = () => {
     }
   };
 
-  const fetchReviews = async (fountainId: string) => {
+  const fetchReviews = useCallback(async (fountainId: string) => {
     setReviewsLoading(true);
     try {
+      // Test the ratings table first
+      console.log("Testing ratings table access...");
+      await testRatingsTable();
+
       const reviewsData = await getFountainReviews(fountainId);
       setReviews(reviewsData);
+
+      // Load comments for all reviews
+      await loadCommentsForReviews(reviewsData);
     } catch (error) {
       console.error("Error fetching reviews:", error);
     } finally {
       setReviewsLoading(false);
     }
-  };
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -195,7 +285,7 @@ export const FountainDetail: React.FC = () => {
     if (id) {
       fetchReviews(id);
     }
-  }, [id]);
+  }, [id, fetchReviews]);
 
   const getStatusColor = (status: Fountain["status"]) => {
     switch (status) {
@@ -521,6 +611,16 @@ export const FountainDetail: React.FC = () => {
                     showFountainInfo={false}
                     onVote={handleVote}
                     showComments={true}
+                    comments={commentsMap[review.id] || []}
+                    onCommentUpdate={(comment) =>
+                      handleCommentUpdate(review.id, comment)
+                    }
+                    onCommentCreated={(comment) =>
+                      handleCommentCreated(review.id, comment)
+                    }
+                    onCommentDelete={(commentId) =>
+                      handleCommentDelete(review.id, commentId)
+                    }
                   />
                 ))}
               </div>

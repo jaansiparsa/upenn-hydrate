@@ -109,9 +109,12 @@ export const HyDATEr: React.FC<HyDATErProps> = ({ onStartMessage }) => {
                   <User className="h-8 w-8 text-pink-600" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <button
+                    onClick={() => navigate(`/user/${match.user_id}`)}
+                    className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors cursor-pointer text-left"
+                  >
                     {match.display_name || "Anonymous User"}
-                  </h3>
+                  </button>
                   <p className="text-gray-600 mb-2">
                     {match.total_ratings} fountain reviews
                   </p>

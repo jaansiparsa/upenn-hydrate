@@ -378,7 +378,7 @@ export const Profile: React.FC = () => {
             <span className="text-xs text-gray-500">View all badges below</span>
           </div>
           <BadgeDisplay
-            userId={profile.id}
+            userId={user?.id || ""}
             showProgress={false}
             compact={true}
           />

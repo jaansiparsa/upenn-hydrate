@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 
 import type { Conversation } from "../services/messagingService";
 import { getConversations } from "../services/messagingService";
+import { useNavigate } from "react-router-dom";
 
 interface MessageListProps {
   onSelectConversation: (userId: string, userName?: string) => void;
@@ -13,6 +14,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   onSelectConversation,
   selectedUserId,
 }) => {
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,9 +125,15 @@ export const MessageList: React.FC<MessageListProps> = ({
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-1">
-                <h3 className="text-sm font-semibold text-gray-900 truncate">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/user/${conversation.user_id}`);
+                  }}
+                  className="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors cursor-pointer text-left"
+                >
                   {conversation.display_name || "Anonymous User"}
-                </h3>
+                </button>
                 {conversation.last_message && (
                   <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
                     {formatTime(conversation.last_message.created_at)}

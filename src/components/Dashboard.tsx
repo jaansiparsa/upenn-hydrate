@@ -24,6 +24,7 @@ import { Leaderboard } from "./Leaderboard";
 import { Map } from "./Map";
 import { Messages } from "./Messages";
 import { useAuth } from "../contexts/AuthContext";
+import { toast } from "sonner";
 
 export const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -56,10 +57,22 @@ export const Dashboard: React.FC = () => {
     // Filter map to show only the selected fountain
     setFilteredFountains([fountain]);
     setShowSearchModal(false);
+    
+    // Show toast notification
+    toast.success("Fountain Filtered", {
+      description: `Map now shows only ${fountain.name}`,
+      duration: 3000,
+    });
   };
 
   const handleClearFilter = () => {
     setFilteredFountains(undefined);
+    
+    // Show toast notification
+    toast.info("Filter Cleared", {
+      description: "Map now shows all fountains",
+      duration: 3000,
+    });
   };
 
   const handleStartMessage = (userId: string, userName?: string) => {
@@ -471,7 +484,10 @@ export const Dashboard: React.FC = () => {
                     </button>
                   </div>
                 </div>
-                <Map className="h-[400px] sm:h-[500px] md:h-[600px] rounded-lg shadow-lg" />
+                <Map 
+                  className="h-[400px] sm:h-[500px] md:h-[600px] rounded-lg shadow-lg" 
+                  filteredFountains={filteredFountains}
+                />
               </div>
             </>
           )}

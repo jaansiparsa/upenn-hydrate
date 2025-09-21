@@ -203,17 +203,22 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         }
       }
 
+      // Show success toast
+      toast.success(
+        isEditing ? "Review Updated Successfully!" : "Review Posted Successfully!",
+        {
+          description: isEditing 
+            ? "Your review has been updated." 
+            : "Thank you for sharing your experience!",
+          duration: 3000,
+        }
+      );
+
       // Call optional onSubmit callback
       if (onSubmit) {
         onSubmit(formData);
       }
 
-      // Show success message
-      alert(
-        isEditing
-          ? "Review updated successfully!"
-          : "Review submitted successfully!"
-      );
     } catch (error) {
       console.error("Error submitting review:", error);
       const errorMessage =
@@ -229,8 +234,16 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           submit:
             "You already have a review for this fountain. Your changes will be saved.",
         });
+        toast.info("Review Already Exists", {
+          description: "You already have a review for this fountain. Your changes will be saved.",
+          duration: 4000,
+        });
       } else {
         setErrors({ submit: errorMessage });
+        toast.error("Failed to Submit Review", {
+          description: errorMessage,
+          duration: 4000,
+        });
       }
     } finally {
       setLoading(false);

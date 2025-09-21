@@ -468,6 +468,31 @@ const checkCountRequirement = async (
   return false;
 };
 
+// Helper function to calculate streak
+const calculateStreak = (dates: Date[]): number => {
+  if (dates.length === 0) return 0;
+
+  let streak = 1;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let i = 1; i < dates.length; i++) {
+    const currentDate = new Date(dates[i]);
+    currentDate.setHours(0, 0, 0, 0);
+
+    const expectedDate = new Date(today);
+    expectedDate.setDate(today.getDate() - i);
+
+    if (currentDate.getTime() === expectedDate.getTime()) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+};
+
 // Check streak-based requirements
 const checkStreakRequirement = async (
   userId: string,
@@ -596,30 +621,6 @@ const checkSocialRequirement = async (
 };
 
 // Calculate streak days
-const calculateStreak = (dates: Date[]): number => {
-  if (dates.length === 0) return 0;
-
-  const sortedDates = dates.sort((a, b) => b.getTime() - a.getTime());
-  let streak = 0;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  for (let i = 0; i < sortedDates.length; i++) {
-    const date = new Date(sortedDates[i]);
-    date.setHours(0, 0, 0, 0);
-
-    const expectedDate = new Date(today);
-    expectedDate.setDate(today.getDate() - i);
-
-    if (date.getTime() === expectedDate.getTime()) {
-      streak++;
-    } else {
-      break;
-    }
-  }
-
-  return streak;
-};
 
 // Enhanced badge checking for review-based badges
 export const checkReviewBasedBadges = async (

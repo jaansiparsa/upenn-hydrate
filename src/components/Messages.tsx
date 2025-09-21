@@ -6,11 +6,13 @@ import { MessageList } from "./MessageList";
 interface MessagesProps {
   initialUserId?: string;
   initialUserName?: string;
+  initialUserProfilePictureUrl?: string;
 }
 
 export const Messages: React.FC<MessagesProps> = ({
   initialUserId,
   initialUserName,
+  initialUserProfilePictureUrl,
 }) => {
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(
     initialUserId
@@ -18,15 +20,20 @@ export const Messages: React.FC<MessagesProps> = ({
   const [selectedUserName, setSelectedUserName] = useState<string | undefined>(
     initialUserName
   );
+  const [selectedUserProfilePictureUrl, setSelectedUserProfilePictureUrl] = useState<string | undefined>(
+    initialUserProfilePictureUrl
+  );
 
-  const handleSelectConversation = (userId: string, userName?: string) => {
+  const handleSelectConversation = (userId: string, userName?: string, profilePictureUrl?: string) => {
     setSelectedUserId(userId);
     setSelectedUserName(userName);
+    setSelectedUserProfilePictureUrl(profilePictureUrl);
   };
 
   const handleBack = () => {
     setSelectedUserId(undefined);
     setSelectedUserName(undefined);
+    setSelectedUserProfilePictureUrl(undefined);
   };
 
   return (
@@ -36,6 +43,7 @@ export const Messages: React.FC<MessagesProps> = ({
           <ChatWindow
             otherUserId={selectedUserId}
             otherUserName={selectedUserName}
+            otherUserProfilePictureUrl={selectedUserProfilePictureUrl}
             onBack={handleBack}
           />
         ) : (

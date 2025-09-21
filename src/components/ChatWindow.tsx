@@ -8,12 +8,14 @@ import { useAuth } from "../contexts/AuthContext";
 interface ChatWindowProps {
   otherUserId: string;
   otherUserName?: string;
+  otherUserProfilePictureUrl?: string;
   onBack: () => void;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   otherUserId,
   otherUserName,
+  otherUserProfilePictureUrl,
   onBack,
 }) => {
   const { user } = useAuth();
@@ -91,6 +93,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       messages={initialMessages}
       otherUserId={otherUserId}
       otherUserName={otherUserName}
+      otherUserProfilePictureUrl={otherUserProfilePictureUrl}
       onBack={onBack}
     />
   );

@@ -10,10 +10,12 @@ export interface Message {
   sender?: {
     display_name?: string;
     email?: string;
+    profile_picture_url?: string;
   };
   receiver?: {
     display_name?: string;
     email?: string;
+    profile_picture_url?: string;
   };
 }
 
@@ -21,6 +23,7 @@ export interface Conversation {
   user_id: string;
   display_name?: string;
   email?: string;
+  profile_picture_url?: string;
   last_message?: Message;
   unread_count: number;
   total_ratings: number;
@@ -52,11 +55,13 @@ export async function sendMessage(
       *,
       sender:sender_id (
         display_name,
-        email
+        email,
+        profile_picture_url
       ),
       receiver:receiver_id (
         display_name,
-        email
+        email,
+        profile_picture_url
       )
     `
     )
@@ -88,11 +93,13 @@ export async function getConversations(): Promise<Conversation[]> {
       *,
       sender:sender_id (
         display_name,
-        email
+        email,
+        profile_picture_url
       ),
       receiver:receiver_id (
         display_name,
-        email
+        email,
+        profile_picture_url
       )
     `
     )
@@ -123,6 +130,7 @@ export async function getConversations(): Promise<Conversation[]> {
         user_id: otherUserId,
         display_name: otherUser?.display_name,
         email: otherUser?.email,
+        profile_picture_url: otherUser?.profile_picture_url,
         last_message: message,
         unread_count: 0,
         total_ratings: 0,
@@ -151,7 +159,7 @@ export async function getConversations(): Promise<Conversation[]> {
   const userIds = Array.from(conversationMap.keys());
   const { data: userStats } = await supabase
     .from("users")
-    .select("id, display_name, email, total_ratings, badges")
+    .select("id, display_name, email, profile_picture_url, total_ratings, badges")
     .in("id", userIds);
 
   // Update conversations with user stats
@@ -160,6 +168,7 @@ export async function getConversations(): Promise<Conversation[]> {
     if (conversation) {
       conversation.total_ratings = userStat.total_ratings;
       conversation.badges = userStat.badges;
+      conversation.profile_picture_url = userStat.profile_picture_url;
     }
   });
 
@@ -190,11 +199,13 @@ export async function getMessages(otherUserId: string): Promise<Message[]> {
       *,
       sender:sender_id (
         display_name,
-        email
+        email,
+        profile_picture_url
       ),
       receiver:receiver_id (
         display_name,
-        email
+        email,
+        profile_picture_url
       )
     `
     )

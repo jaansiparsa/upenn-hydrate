@@ -24,6 +24,7 @@ import { checkAndAwardBadges } from "../services/badgeService";
 import { drinksService } from "../services/drinksService";
 import { getUserReviews } from "../services/reviewService";
 import { supabase } from "../lib/supabase";
+import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
 
 export const UserProfile: React.FC = () => {
@@ -48,7 +49,7 @@ export const UserProfile: React.FC = () => {
   const [updating, setUpdating] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  
+
   const [error, setError] = useState<string | null>(null);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
@@ -75,8 +76,7 @@ export const UserProfile: React.FC = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
-  const { notifications, showBadgeEarned, removeNotification } =
-    useBadgeNotifications();
+  const { notifications, removeNotification } = useBadgeNotifications();
   const [consumptionData, setConsumptionData] = useState<{
     total_ml: number;
     total_oz: number;
@@ -634,14 +634,14 @@ export const UserProfile: React.FC = () => {
             .select("*")
             .eq("id", authUser.id)
             .single();
-          
+
           if (error) throw error;
           setCurrentUser(data);
         } catch (error) {
           console.error("Error fetching current user:", error);
         }
       };
-      
+
       fetchCurrentUser();
     } else {
       setCurrentUser(null);
@@ -651,7 +651,8 @@ export const UserProfile: React.FC = () => {
   // Simple follow state check when profile loads
   useEffect(() => {
     if (currentUser && profile && !isOwnProfile) {
-      const isCurrentlyFollowing = currentUser.following?.includes(profile.id) || false;
+      const isCurrentlyFollowing =
+        currentUser.following?.includes(profile.id) || false;
       setIsFollowing(isCurrentlyFollowing);
     } else {
       setIsFollowing(false);
@@ -682,66 +683,75 @@ export const UserProfile: React.FC = () => {
     }
   };
 
-
   const handleFollow = async () => {
     if (!currentUser || !profile || isOwnProfile) return;
 
     setFollowLoading(true);
-    
+
     try {
       if (isFollowing) {
         // Unfollow: Remove from both arrays
-        const newFollowers = profile.followers?.filter(id => id !== currentUser.id) || [];
-        const newFollowing = currentUser.following?.filter(id => id !== profile.id) || [];
-        
+        const newFollowers =
+          profile.followers?.filter((id) => id !== currentUser.id) || [];
+        const newFollowing =
+          currentUser.following?.filter((id: string) => id !== profile.id) ||
+          [];
+
         // Update profile's followers
         const { error: profileError } = await supabase
           .from("users")
           .update({ followers: newFollowers })
           .eq("id", profile.id);
-        
+
         if (profileError) throw profileError;
-        
+
         // Update current user's following
         const { error: userError } = await supabase
           .from("users")
           .update({ following: newFollowing })
           .eq("id", currentUser.id);
-        
+
         if (userError) throw userError;
-        
+
         // Update local state
         setIsFollowing(false);
-        setProfile(prev => prev ? { ...prev, followers: newFollowers } : null);
-        setCurrentUser(prev => prev ? { ...prev, following: newFollowing } : null);
-        
+        setProfile((prev) =>
+          prev ? { ...prev, followers: newFollowers } : null
+        );
+        setCurrentUser((prev: any) =>
+          prev ? { ...prev, following: newFollowing } : null
+        );
       } else {
         // Follow: Add to both arrays
         const newFollowers = [...(profile.followers || []), currentUser.id];
         const newFollowing = [...(currentUser.following || []), profile.id];
-        
+
         // Update profile's followers
         const { error: profileError } = await supabase
           .from("users")
           .update({ followers: newFollowers })
           .eq("id", profile.id);
-        
+
         if (profileError) throw profileError;
-        
+
         // Update current user's following
         const { error: userError } = await supabase
           .from("users")
           .update({ following: newFollowing })
           .eq("id", currentUser.id);
-        
+
         if (userError) throw userError;
-        
+
         // Update local state
         setIsFollowing(true);
-        setProfile(prev => prev ? { ...prev, followers: newFollowers } : null);
-        setCurrentUser(prev => prev ? { ...prev, following: newFollowing } : null);
+        setProfile((prev) =>
+          prev ? { ...prev, followers: newFollowers } : null
+        );
+        setCurrentUser((prev: any) =>
+          prev ? { ...prev, following: newFollowing } : null
+        );
       }
-      
+
       // Check for new badges
       if (currentUser) {
         const newBadges = await checkAndAwardBadges(
@@ -751,22 +761,21 @@ export const UserProfile: React.FC = () => {
         );
         if (newBadges.length > 0) {
           newBadges.forEach((badgeName) => {
-            toast.success(`You earned the ${badgeName} badge!`, "bronze");
+            toast.success(`You earned the ${badgeName} badge!`);
           });
-          
+
           // Refresh current user data to show new badges
           const { data: refreshedUser } = await supabase
             .from("users")
             .select("*")
             .eq("id", currentUser.id)
             .single();
-          
+
           if (refreshedUser) {
             setCurrentUser(refreshedUser);
           }
         }
       }
-      
     } catch (error) {
       console.error("Error updating follow status:", error);
       setError("Failed to update follow status");

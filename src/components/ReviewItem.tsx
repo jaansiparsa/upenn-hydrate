@@ -1,4 +1,4 @@
-import { Calendar, MessageCircle, Star, User } from "lucide-react";
+import { Calendar, MessageCircle, Star } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 
 import { CommentCard } from "./CommentCard";

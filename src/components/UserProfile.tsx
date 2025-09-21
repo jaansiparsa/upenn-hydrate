@@ -952,7 +952,6 @@ export const UserProfile: React.FC = () => {
                     <span className="font-medium">
                       {profile.followers?.length || 0}
                     </span>
-                    <span className="text-gray-500">followers</span>
                   </button>
                   <button
                     onClick={handleShowFollowing}

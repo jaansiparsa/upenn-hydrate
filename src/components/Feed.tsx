@@ -1,4 +1,4 @@
-import { Globe, RefreshCw, Rss, UserCheck } from "lucide-react";
+import { Globe, RefreshCw, Rss, UserCheck, AlertCircle, MessageSquare } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import type { RatingComment } from "../services/commentService";
@@ -226,19 +226,7 @@ export const Feed: React.FC = () => {
         </div>
         <div className="text-center py-12">
           <div className="text-red-400 mb-4">
-            <svg
-              className="mx-auto h-12 w-12"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+            <AlertCircle className="mx-auto h-12 w-12" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             Error Loading Feed
@@ -346,19 +334,7 @@ export const Feed: React.FC = () => {
       ) : (
         <div className="text-center py-12">
           <div className="text-gray-400 mb-4">
-            <svg
-              className="mx-auto h-12 w-12"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-              />
-            </svg>
+            <MessageSquare className="mx-auto h-12 w-12" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             {filter === "following" && user

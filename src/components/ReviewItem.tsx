@@ -1,11 +1,19 @@
-import { Calendar, MessageCircle, Star, User } from "lucide-react";
+import {
+  Calendar,
+  MessageCircle,
+  Star,
+  ThumbsDown,
+  ThumbsUp,
+} from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
+import { downvoteReview, upvoteReview } from "../services/reviewService";
 
 import { CommentCard } from "./CommentCard";
 import { CommentForm } from "./CommentForm";
 import type { RatingComment } from "../services/commentService";
 import type { Review } from "../services/reviewService";
 import { getRatingComments } from "../services/commentService";
+import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 interface ReviewItemProps {
@@ -24,14 +32,17 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
   showFountainInfo = false,
   showComments = false,
   comments = [],
+  onVote,
   onCommentUpdate,
   onCommentCreated,
   onCommentDelete,
 }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [localComments, setLocalComments] = useState<RatingComment[]>(comments);
   const [loadingComments, setLoadingComments] = useState(false);
   const [showCommentsSection, setShowCommentsSection] = useState(false);
+  const [voting, setVoting] = useState(false);
 
   // Update local comments when props change
   useEffect(() => {
@@ -94,6 +105,45 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
     );
     onCommentDelete?.(commentId);
   };
+
+  const handleUpvote = async () => {
+    if (!user) {
+      // Could show a toast or redirect to login
+      return;
+    }
+
+    setVoting(true);
+    try {
+      const updatedReview = await upvoteReview(review.id);
+      onVote?.(updatedReview);
+    } catch (error) {
+      console.error("Error upvoting review:", error);
+    } finally {
+      setVoting(false);
+    }
+  };
+
+  const handleDownvote = async () => {
+    if (!user) {
+      // Could show a toast or redirect to login
+      return;
+    }
+
+    setVoting(true);
+    try {
+      const updatedReview = await downvoteReview(review.id);
+      onVote?.(updatedReview);
+    } catch (error) {
+      console.error("Error downvoting review:", error);
+    } finally {
+      setVoting(false);
+    }
+  };
+
+  const isUpvoted = user && review.upvotes?.includes(user.id);
+  const isDownvoted = user && review.downvotes?.includes(user.id);
+  const upvoteCount = review.upvotes?.length || 0;
+  const downvoteCount = review.downvotes?.length || 0;
 
   return (
     <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -237,6 +287,56 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
             <p className="text-sm text-gray-700 bg-gray-50 rounded-md p-3">
               {review.comment}
             </p>
+          </div>
+        )}
+      </div>
+
+      {/* Voting Section */}
+      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={handleUpvote}
+            disabled={voting || !user}
+            className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              isUpvoted
+                ? "bg-green-100 text-green-700 hover:bg-green-200"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            } ${
+              voting || !user
+                ? "opacity-50 cursor-not-allowed"
+                : "cursor-pointer"
+            }`}
+          >
+            <ThumbsUp
+              className={`h-4 w-4 ${isUpvoted ? "fill-current" : ""}`}
+            />
+            <span>{upvoteCount}</span>
+          </button>
+
+          <button
+            onClick={handleDownvote}
+            disabled={voting || !user}
+            className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+              isDownvoted
+                ? "bg-red-100 text-red-700 hover:bg-red-200"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            } ${
+              voting || !user
+                ? "opacity-50 cursor-not-allowed"
+                : "cursor-pointer"
+            }`}
+          >
+            <ThumbsDown
+              className={`h-4 w-4 ${isDownvoted ? "fill-current" : ""}`}
+            />
+            <span>{downvoteCount}</span>
+          </button>
+        </div>
+
+        {voting && (
+          <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span>Voting...</span>
           </div>
         )}
       </div>

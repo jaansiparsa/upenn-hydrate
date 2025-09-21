@@ -8,7 +8,11 @@ import {
   X,
 } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
-import { getFountain, updateFountain } from "../services/fountainService";
+import {
+  getFountain,
+  updateFountain,
+  uploadFountainImage,
+} from "../services/fountainService";
 import {
   getFountainReviews,
   testRatingsTable,
@@ -34,6 +38,8 @@ export const FountainDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -165,12 +171,46 @@ export const FountainDetail: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleImageUpload = async () => {
+    if (!imageFile || !fountain) return;
+
+    setImageUploading(true);
+    try {
+      const imageUrl = await uploadFountainImage(imageFile, fountain.id);
+      await updateFountain(fountain.id, { image_url: imageUrl });
+
+      // Update local state
+      setFountain((prev) => (prev ? { ...prev, image_url: imageUrl } : null));
+
+      // Clear preview and file
+      setImagePreview("");
+      setImageFile(null);
+
+      toast.success("Image uploaded successfully!", {
+        description: "The fountain image has been updated.",
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Failed to upload image", {
+        description: "Please try again.",
+      });
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const removeImagePreview = () => {
+    setImagePreview("");
+    setImageFile(null);
   };
 
   const handleStatusUpdate = async (
@@ -379,12 +419,41 @@ export const FountainDetail: React.FC = () => {
                     />
                   </div>
                 ) : imagePreview ? (
-                  <div className="aspect-w-16 aspect-h-9">
+                  <div className="aspect-w-16 aspect-h-9 relative">
                     <img
                       src={imagePreview}
                       alt="Fountain preview"
                       className="w-full h-48 object-cover"
                     />
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <div className="text-center">
+                        <button
+                          onClick={handleImageUpload}
+                          disabled={imageUploading}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {imageUploading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Uploading...
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-4 w-4 mr-2" />
+                              Upload Image
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={removeImagePreview}
+                          disabled={imageUploading}
+                          className="mt-2 inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="h-48 bg-gray-100 rounded-lg flex items-center justify-center">

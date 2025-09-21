@@ -282,12 +282,12 @@ export const Map: React.FC<MapProps> = ({ className = "", filteredFountains }) =
     };
   }, []);
 
-  // Update markers when fountains data changes
+  // Update markers when fountains data or filteredFountains changes
   useEffect(() => {
-    if (isLoaded && fountains.length > 0) {
+    if (isLoaded && (fountains.length > 0 || filteredFountains)) {
       addFountainMarkers();
     }
-  }, [fountains, isLoaded, addFountainMarkers]);
+  }, [fountains, filteredFountains, isLoaded, addFountainMarkers]);
 
   const handleStyleChange = (style: string) => {
     if (map.current) {

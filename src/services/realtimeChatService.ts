@@ -5,14 +5,14 @@ import type { ChatMessage } from '../hooks/use-realtime-chat'
 // Convert database message to chat message format
 export function convertToChatMessage(message: Message, currentUserId: string): ChatMessage {
   const isFromCurrentUser = message.sender_id === currentUserId
-  const user = isFromCurrentUser ? message.sender : message.receiver
+  const user = isFromCurrentUser ? message.sender : message.sender
   
   return {
     id: message.id,
     content: message.content,
     user: {
       name: user?.display_name || user?.email || 'Anonymous',
-      id: isFromCurrentUser ? message.sender_id : message.receiver_id
+      id: message.sender_id
     },
     createdAt: message.created_at
   }

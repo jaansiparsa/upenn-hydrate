@@ -38,6 +38,7 @@ export const AddFountainForm: React.FC<AddFountainFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(2);
 
   // Initialize map for coordinate selection
   useEffect(() => {
@@ -180,11 +181,19 @@ export const AddFountainForm: React.FC<AddFountainFormProps> = ({
 
       // Show success message
       setShowSuccess(true);
+      setCountdown(2);
 
-      // Navigate back to map after a short delay
-      setTimeout(() => {
-        navigate("/");
-      }, 1500);
+      // Start countdown timer
+      const countdownInterval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            window.location.href = "/";
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
     } catch (error) {
       console.error("Error creating fountain:", error);
       setErrors({ submit: "Failed to create fountain. Please try again." });
@@ -216,8 +225,11 @@ export const AddFountainForm: React.FC<AddFountainFormProps> = ({
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
             Fountain Submitted!
           </h2>
-          <p className="text-gray-600">
+          <p className="text-gray-600 mb-4">
             Your new fountain has been added to the map.
+          </p>
+          <p className="text-sm text-gray-500">
+            Redirecting to homepage in {countdown} second{countdown !== 1 ? 's' : ''}...
           </p>
         </div>
       </div>

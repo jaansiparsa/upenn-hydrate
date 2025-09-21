@@ -2,7 +2,7 @@ import { MessageCircle, User } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 import type { Conversation } from "../services/messagingService";
-import { getConversations, subscribeToAllMessages } from "../services/messagingService";
+import { getConversations } from "../services/messagingService";
 
 interface MessageListProps {
   onSelectConversation: (userId: string, userName?: string) => void;
@@ -19,32 +19,6 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   useEffect(() => {
     loadConversations();
-    
-    // Subscribe to real-time message updates
-    let subscription: any;
-    
-    const setupSubscription = async () => {
-      try {
-        subscription = await subscribeToAllMessages((payload) => {
-          console.log("Real-time conversation update:", payload);
-          
-          // Reload conversations when new messages arrive
-          if (payload.eventType === "INSERT" || payload.eventType === "UPDATE") {
-            loadConversations();
-          }
-        });
-      } catch (error) {
-        console.error("Error setting up conversation subscription:", error);
-      }
-    };
-    
-    setupSubscription();
-    
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
-      }
-    };
   }, []);
 
   const loadConversations = async () => {

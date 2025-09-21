@@ -1,4 +1,6 @@
-import { supabase } from '../lib/supabase'
+'use client'
+
+import { createClient } from '@/components/clients/nextjs/lib/supabase/client'
 import { useCallback, useEffect, useState } from 'react'
 
 interface UseRealtimeChatProps {
@@ -18,6 +20,7 @@ export interface ChatMessage {
 const EVENT_MESSAGE_TYPE = 'message'
 
 export function useRealtimeChat({ roomName, username }: UseRealtimeChatProps) {
+  const supabase = createClient()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [channel, setChannel] = useState<ReturnType<typeof supabase.channel> | null>(null)
   const [isConnected, setIsConnected] = useState(false)
@@ -40,7 +43,7 @@ export function useRealtimeChat({ roomName, username }: UseRealtimeChatProps) {
     return () => {
       supabase.removeChannel(newChannel)
     }
-  }, [roomName, username])
+  }, [roomName, username, supabase])
 
   const sendMessage = useCallback(
     async (content: string) => {

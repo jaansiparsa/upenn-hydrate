@@ -258,41 +258,6 @@ const getBadgeTier = (
   return mapping[badgeName] || "bronze";
 };
 
-// Convert badge display name to internal badge key
-const getBadgeKeyFromName = (badgeName: string): string => {
-  const mapping: Record<string, string> = {
-    "New Reviewer": "new_reviewer",
-    "Frequent Reviewer": "frequent_reviewer",
-    "Quality Reviewer": "quality_reviewer",
-    "Helpful Reviewer": "helpful_reviewer",
-    "Review Machine": "review_machine",
-    "Critic Master": "critic_master",
-    "First Sip": "first_sip",
-    "Cartographer": "cartographer",
-    "Balanced Judge": "balanced_judge",
-    "Hidden Gem Finder": "hidden_gem_finder",
-    "Perfectionist": "perfectionist",
-    "Generous Giver": "generous_giver",
-    "Harsh Critic": "harsh_critic",
-    "Optimist": "optimist",
-    "Realist": "realist",
-    "Pessimist": "pessimist",
-    "Midnight Hydrator": "midnight_hydrator",
-    "Early Bird Drinker": "early_bird_drinker",
-    "Lunch Break Legend": "lunch_break_legend",
-    "Emoji Expert": "emoji_expert",
-    "Caps Lock Crazy": "caps_lock_crazy",
-    "Punctuation Perfectionist": "punctuation_perfectionist",
-    "Review Poet": "review_poet",
-    "Century Club": "century_club",
-    "Millennium Member": "millennium_member",
-    "Friendly Follower": "friendly_follower",
-    "Hydrate Buddy": "hydrate_buddy",
-    "Community Member": "community_member",
-  };
-  return mapping[badgeName] || badgeName.toLowerCase().replace(/\s+/g, "_");
-};
-
 // Enhanced getUserBadges that works with existing database structure
 export const getUserBadgesWithMigration = async (
   userId: string
@@ -314,40 +279,20 @@ export const getUserBadgeProgress = async (
   return data || [];
 };
 
-// Award a badge to a user (using users.badges column)
+// Award a badge to a user
 export const awardBadge = async (
   userId: string,
-  badgeName: string
+  badgeId: string,
+  progressData?: Record<string, unknown>
 ): Promise<void> => {
-  try {
-    // Get current user's badges
-    const { data: userData, error: fetchError } = await supabase
-      .from("users")
-      .select("badges")
-      .eq("id", userId)
-      .single();
+  const { error } = await supabase.from("user_badges").insert({
+    user_id: userId,
+    badge_id: badgeId,
+    progress_data: progressData,
+  });
 
-    if (fetchError) throw fetchError;
-
-    const currentBadges = (userData?.badges as string[]) || [];
-    
-    // Check if badge already exists
-    if (currentBadges.includes(badgeName)) {
-      return; // Badge already awarded
-    }
-
-    // Add new badge to the array
-    const updatedBadges = [...currentBadges, badgeName];
-
-    // Update user's badges
-    const { error: updateError } = await supabase
-      .from("users")
-      .update({ badges: updatedBadges })
-      .eq("id", userId);
-
-    if (updateError) throw updateError;
-  } catch (error) {
-    console.error("Error awarding badge:", error);
+  if (error && error.code !== "23505") {
+    // Ignore duplicate key errors
     throw error;
   }
 };
@@ -381,53 +326,76 @@ export const checkAndAwardBadges = async (
   try {
     // Get user's current badges to avoid duplicates
     const userBadges = await getUserBadgesFromUsersTable(userId);
-    const earnedBadgeNames = userBadges.map((ub) => ub.badges?.name || "");
+    const earnedBadgeIds = userBadges.map((ub) => ub.badge_id);
 
-    // Check specific badges based on action type
-    switch (actionType) {
-      case "user_followed":
-      case "follow_user":
-        // Check social badges
-        const { data: userData } = await supabase
-          .from("users")
-          .select("following")
-          .eq("id", userId)
-          .single();
+    // Get all badges
+    const allBadges = await getAllBadges();
 
-        const followingCount = userData?.following?.length || 0;
+    // Get user's current progress
+    const userProgress = await getUserBadgeProgress(userId);
+    const progressMap = new Map(
+      userProgress.map((p) => [p.progression_group, p])
+    );
 
-        // Friendly Follower (3 follows)
-        if (followingCount >= 3 && !earnedBadgeNames.includes("Friendly Follower")) {
-          await awardBadge(userId, "friendly_follower");
-          awardedBadges.push("Friendly Follower");
+    // Check each badge
+    for (const badge of allBadges) {
+      if (earnedBadgeIds.includes(badge.id)) continue; // Skip already earned badges
+
+      let shouldAward = false;
+      const progressData: Record<string, unknown> | null = null;
+
+      switch (badge.requirement_type) {
+        case "count":
+          shouldAward = await checkCountRequirement(
+            userId,
+            badge,
+            actionType,
+            actionData
+          );
+          break;
+        case "streak":
+          shouldAward = await checkStreakRequirement(
+            userId,
+            badge,
+            actionType,
+            actionData
+          );
+          break;
+        case "special":
+          shouldAward = await checkSpecialRequirement(
+            userId,
+            badge,
+            actionType,
+            actionData
+          );
+          break;
+        case "social":
+          shouldAward = await checkSocialRequirement(
+            userId,
+            badge,
+            actionType,
+            actionData
+          );
+          break;
+      }
+
+      if (shouldAward) {
+        await awardBadge(userId, badge.id, progressData || undefined);
+        awardedBadges.push(badge.name);
+
+        // Update progression if it's a progression badge
+        if (badge.is_progression && badge.progression_group) {
+          const currentProgress = progressMap.get(badge.progression_group);
+          const newProgressValue = (currentProgress?.progress_value || 0) + 1;
+
+          await updateBadgeProgress(
+            userId,
+            badge.progression_group,
+            newProgressValue,
+            badge.tier
+          );
         }
-
-        // Hydrate Buddy (5 follows)
-        if (followingCount >= 5 && !earnedBadgeNames.includes("Hydrate Buddy")) {
-          await awardBadge(userId, "hydrate_buddy");
-          awardedBadges.push("Hydrate Buddy");
-        }
-
-        // Community Member (10 follows)
-        if (followingCount >= 10 && !earnedBadgeNames.includes("Community Member")) {
-          await awardBadge(userId, "community_member");
-          awardedBadges.push("Community Member");
-        }
-        break;
-
-      case "review_created":
-        // Check review-based badges
-        const reviewBadges = await checkReviewBasedBadges(userId, actionData);
-        awardedBadges.push(...reviewBadges);
-        break;
-
-      case "fountain_created":
-        // Cartographer badge
-        if (!earnedBadgeNames.includes("Cartographer")) {
-          await awardBadge(userId, "cartographer");
-          awardedBadges.push("Cartographer");
-        }
-        break;
+      }
     }
 
     return awardedBadges;
@@ -442,8 +410,10 @@ const checkCountRequirement = async (
   userId: string,
   badge: Badge,
   actionType: string,
-  _actionData: Record<string, unknown>
+  actionData: Record<string, unknown>
 ): Promise<boolean> => {
+  // Mark actionData as used to avoid TypeScript error
+  void actionData;
   switch (badge.category) {
     case "reviewer":
       if (actionType === "review_created") {
@@ -503,8 +473,10 @@ const checkStreakRequirement = async (
   userId: string,
   badge: Badge,
   actionType: string,
-  _actionData: Record<string, unknown>
+  actionData: Record<string, unknown>
 ): Promise<boolean> => {
+  // Mark actionData as used to avoid TypeScript error
+  void actionData;
   if (actionType === "review_created") {
     // Calculate review streak
     const { data } = await supabase
@@ -596,8 +568,10 @@ const checkSocialRequirement = async (
   userId: string,
   badge: Badge,
   actionType: string,
-  _actionData: Record<string, unknown>
+  actionData: Record<string, unknown>
 ): Promise<boolean> => {
+  // Mark actionData as used to avoid TypeScript error
+  void actionData;
   if (actionType === "user_followed") {
     const { data } = await supabase
       .from("users")
@@ -755,9 +729,7 @@ export const checkReviewBasedBadges = async (
       }
 
       if (shouldAward) {
-        // Convert badge name to the internal badge key
-        const badgeKey = getBadgeKeyFromName(badge.name);
-        await awardBadge(userId, badgeKey);
+        await awardBadge(userId, badge.id);
         awardedBadges.push(badge.name);
       }
     }

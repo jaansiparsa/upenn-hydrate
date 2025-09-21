@@ -8,9 +8,15 @@ import {
 
 import type { Review } from "../services/reviewService";
 import { Star } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
-import { checkAndAwardBadges } from "../services/badgeService";
 import { toast } from "sonner";
+import { useAuth } from "../contexts/AuthContext";
+
+// Type for Supabase real-time payload
+interface SupabaseRealtimePayload {
+  new?: Review;
+  old?: Review;
+  eventType?: string;
+}
 
 interface ReviewFormProps {
   fountainId: string;
@@ -73,17 +79,18 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   useEffect(() => {
     if (!user) return;
 
-    const subscription = subscribeToReviews(fountainId, (payload: any) => {
+    const subscription = subscribeToReviews(fountainId, (payload) => {
       console.log("Real-time review update:", payload);
       // Reload the review if it's the current user's review
-      if (payload.new && payload.new.user_id === user.id) {
-        setExistingReview(payload.new as Review);
+      const typedPayload = payload as SupabaseRealtimePayload;
+      if (typedPayload.new && typedPayload.new.user_id === user.id) {
+        setExistingReview(typedPayload.new);
         setFormData({
-          coldness: (payload.new as Review).coldness,
-          experience: (payload.new as Review).experience,
-          pressure: (payload.new as Review).pressure,
-          yumFactor: (payload.new as Review).yum_factor,
-          comments: (payload.new as Review).comment || "",
+          coldness: typedPayload.new.coldness,
+          experience: typedPayload.new.experience,
+          pressure: typedPayload.new.pressure,
+          yumFactor: typedPayload.new.yum_factor,
+          comments: typedPayload.new.comment || "",
         });
         setIsEditing(true);
       }
@@ -173,23 +180,26 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       // Check for new badges after review creation/update
       if (!isEditing) {
         try {
-          const newBadges = await checkAndAwardBadges(user.id, 'review_created', {
-            fountain_id: fountainId,
-            review_id: savedReview.id
+          const { checkReviewBasedBadges } = await import(
+            "../services/badgeService"
+          );
+          const newBadges = await checkReviewBasedBadges(user.id, {
+            review_id: savedReview.id,
+            ...reviewData,
           });
-          
+
           // Show badge notifications
           if (newBadges.length > 0) {
-            console.log('New badges earned:', newBadges);
-            newBadges.forEach(badge => {
+            console.log("New badges earned:", newBadges);
+            newBadges.forEach((badgeName) => {
               toast.success("🎉 New Badge Earned!", {
-                description: `You've earned the "${badge.name}" badge!`,
+                description: `You've earned the "${badgeName}" badge!`,
                 duration: 5000,
               });
             });
           }
         } catch (error) {
-          console.error('Error checking badges:', error);
+          console.error("Error checking badges:", error);
         }
       }
 
@@ -199,7 +209,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       }
 
       // Show success message
-      toast.success(
+      alert(
         isEditing
           ? "Review updated successfully!"
           : "Review submitted successfully!"
@@ -215,13 +225,11 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       if (errorMessage.includes("already has a review")) {
         // User already has a review, switch to edit mode
         setIsEditing(true);
-        toast.info("Review Updated", {
-          description: "You already have a review for this fountain. Your changes will be saved.",
+        setErrors({
+          submit:
+            "You already have a review for this fountain. Your changes will be saved.",
         });
       } else {
-        toast.error("Failed to submit review", {
-          description: errorMessage,
-        });
         setErrors({ submit: errorMessage });
       }
     } finally {

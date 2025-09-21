@@ -1,10 +1,4 @@
-import {
-  ArrowLeft,
-  Calendar,
-  MapPin,
-  Star,
-  Users,
-} from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Star, Users } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -265,8 +259,34 @@ export const PlanDate: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex space-x-4">
           <button
-            onClick={() => navigate(`/dashboard?tab=messages&userId=${userId}`)}
-            className="flex-1 bg-pink-600 text-white py-3 px-6 rounded-lg hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-colors flex items-center justify-center"
+            onClick={() => {
+              if (!userId) {
+                console.error("No userId available for navigation");
+                return;
+              }
+              console.log("Start Chatting clicked:", {
+                userId,
+                userName: planData?.user2DisplayName,
+              });
+
+              // Store message data in localStorage
+              localStorage.setItem(
+                "pendingMessage",
+                JSON.stringify({
+                  userId: userId,
+                  userName: planData?.user2DisplayName,
+                  timestamp: Date.now(),
+                })
+              );
+
+              navigate("/dashboard");
+            }}
+            disabled={!userId}
+            className={`flex-1 py-3 px-6 rounded-lg focus:outline-none focus:ring-2 transition-colors flex items-center justify-center ${
+              userId
+                ? "bg-pink-600 text-white hover:bg-pink-700 focus:ring-pink-500"
+                : "bg-gray-400 text-gray-200 cursor-not-allowed"
+            }`}
           >
             <Users className="h-5 w-5 mr-2" />
             Start Chatting

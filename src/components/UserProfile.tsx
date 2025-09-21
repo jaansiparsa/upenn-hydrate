@@ -35,7 +35,6 @@ export const UserProfile: React.FC = () => {
     display_name?: string;
     email?: string;
     total_ratings: number;
-    badges: string[];
     followers: string[];
     following: string[];
     profile_picture_url?: string;
@@ -519,7 +518,9 @@ export const UserProfile: React.FC = () => {
   };
 
   // Make test function available globally for debugging
-  (window as any).testProfilePermissions = testPermissions;
+  (
+    window as unknown as { testProfilePermissions: () => void }
+  ).testProfilePermissions = testPermissions;
 
   // Check and create storage bucket if needed
   const ensureStorageBucket = async () => {
@@ -842,18 +843,7 @@ export const UserProfile: React.FC = () => {
     return totalRating / reviews.length;
   };
 
-  const getBadgeDisplay = (badges: string[]) => {
-    if (!badges || badges.length === 0) return "No badges yet";
-
-    const badgeMap: Record<string, string> = {
-      new_reviewer: "New Reviewer",
-      frequent_reviewer: "Frequent Reviewer",
-      quality_reviewer: "Quality Reviewer",
-      helpful_reviewer: "Helpful Reviewer",
-    };
-
-    return badges.map((badge) => badgeMap[badge] || badge).join(", ");
-  };
+  // Remove the old getBadgeDisplay function since we're using BadgeDisplay component
 
   if (loading) {
     return (
@@ -1076,7 +1066,7 @@ export const UserProfile: React.FC = () => {
         )}
 
         {/* Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 justify-items-center">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}
@@ -1107,32 +1097,20 @@ export const UserProfile: React.FC = () => {
             </div>
             <div className="text-xs text-gray-600">Following</div>
           </div>
-
-          <div className="text-center bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center justify-center mb-2">
-              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-2">
-                <span className="text-gray-600 text-sm">🏆</span>
-              </div>
-            </div>
-            <div className="text-sm text-gray-600">Badges</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {getBadgeDisplay(profile.badges)}
-            </div>
-          </div>
         </div>
-      </div>
 
-      {/* Badges Section */}
-      <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-        <div className="flex items-center mb-6">
-          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
-            <span className="text-yellow-600 text-lg">🏆</span>
+        {/* Quick Badge Preview */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700">Recent Badges</h3>
+            <span className="text-xs text-gray-500">View all badges below</span>
           </div>
-          <h2 className="text-xl font-bold text-gray-900">
-            Badges & Achievements
-          </h2>
+          <BadgeDisplay
+            userId={profile.id}
+            showProgress={false}
+            compact={true}
+          />
         </div>
-        <BadgeDisplay userId={profile.id} showProgress={true} compact={false} />
       </div>
 
       {/* Reviews Section */}

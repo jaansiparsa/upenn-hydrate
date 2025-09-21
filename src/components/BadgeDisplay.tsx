@@ -15,6 +15,8 @@ import {
   getUserBadgesWithMigration,
 } from "../services/badgeService";
 
+// CSS animations will be handled via Tailwind classes
+
 interface BadgeDisplayProps {
   userId: string;
   showProgress?: boolean;
@@ -34,11 +36,11 @@ const categoryIcons = {
 };
 
 const tierColors = {
-  bronze: "text-amber-600 bg-amber-100",
-  silver: "text-gray-600 bg-gray-100",
-  gold: "text-yellow-600 bg-yellow-100",
-  platinum: "text-blue-600 bg-blue-100",
-  special: "text-purple-600 bg-purple-100",
+  bronze: "text-amber-700 bg-amber-50",
+  silver: "text-gray-700 bg-gray-50",
+  gold: "text-yellow-700 bg-yellow-50",
+  platinum: "text-blue-700 bg-blue-50",
+  special: "text-purple-700 bg-purple-50",
 };
 
 const tierBorders = {
@@ -126,18 +128,23 @@ export const BadgeDisplay: React.FC<BadgeDisplayProps> = ({
           return (
             <div
               key={userBadge.id}
-              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+              className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border-2 transition-all duration-300 hover:scale-105 hover:shadow-lg cursor-pointer group animate-fade-in ${
                 tierColors[badge.tier]
-              } ${tierBorders[badge.tier]} border`}
+              } ${tierBorders[badge.tier]}`}
               title={`${badge.name}: ${badge.description}`}
             >
-              <span className="mr-1">{badge.icon}</span>
-              {badge.name}
+              <span className="mr-1.5 text-sm group-hover:scale-110 transition-transform duration-200">
+                {badge.icon}
+              </span>
+              <span className="group-hover:text-opacity-90 transition-colors duration-200">
+                {badge.name}
+              </span>
             </div>
           );
         })}
         {userBadges.length > 6 && (
-          <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium text-gray-600 bg-gray-100">
+          <div className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium text-gray-600 bg-gradient-to-r from-gray-100 to-gray-200 border border-gray-300 hover:from-gray-200 hover:to-gray-300 transition-all duration-300 hover:scale-105 cursor-pointer">
+            <span className="mr-1">🏆</span>
             +{userBadges.length - 6} more
           </div>
         )}
@@ -148,15 +155,15 @@ export const BadgeDisplay: React.FC<BadgeDisplayProps> = ({
   return (
     <div className="space-y-6">
       {/* Category Filter */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 mb-6">
         {categories.map((category) => (
           <button
             key={category}
             onClick={() => setSelectedCategory(category)}
-            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 ${
               selectedCategory === category
-                ? "bg-blue-100 text-blue-700 border border-blue-200"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200"
+                ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-200/50 border-2 border-blue-300"
+                : "bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 border border-gray-300 hover:shadow-md"
             }`}
           >
             {category === "all"
@@ -181,9 +188,9 @@ export const BadgeDisplay: React.FC<BadgeDisplayProps> = ({
           return (
             <div
               key={userBadge.id}
-              className={`p-4 rounded-lg border-2 ${tierBorders[badge.tier]} ${
-                tierColors[badge.tier]
-              } bg-white hover:shadow-md transition-shadow`}
+              className={`p-4 rounded-lg border-2 transition-all duration-300 hover:shadow-lg cursor-pointer animate-fade-in ${
+                tierBorders[badge.tier]
+              } ${tierColors[badge.tier]} bg-white`}
             >
               <div className="flex items-start space-x-3">
                 <div className={`p-2 rounded-full ${tierColors[badge.tier]}`}>

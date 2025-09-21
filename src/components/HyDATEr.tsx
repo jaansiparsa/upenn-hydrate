@@ -3,8 +3,10 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import type { Match } from "../services/datingService";
 import { getUserMatches } from "../services/datingService";
+import { sendMessage } from "../services/messagingService";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface HyDATErProps {
   onStartMessage?: (userId: string, userName?: string) => void;
@@ -16,6 +18,8 @@ export const HyDATEr: React.FC<HyDATErProps> = ({ onStartMessage }) => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [likedUsers, setLikedUsers] = useState<Set<string>>(new Set());
+  const [sendingLike, setSendingLike] = useState<string | null>(null);
 
   const loadMatches = useCallback(async () => {
     if (!user) return;
@@ -40,6 +44,35 @@ export const HyDATEr: React.FC<HyDATErProps> = ({ onStartMessage }) => {
 
   const handlePlanDate = (userId: string) => {
     navigate(`/plan-date/${userId}`);
+  };
+
+  const handleLike = async (userId: string, userName: string) => {
+    if (!user || likedUsers.has(userId) || sendingLike === userId) return;
+
+    try {
+      setSendingLike(userId);
+      
+      // Send the "I Like You!" message
+      await sendMessage(userId, "I Like You! 💕");
+      
+      // Mark user as liked
+      setLikedUsers(prev => new Set(prev).add(userId));
+      
+      // Show success message
+      toast.success("Like sent!", {
+        description: `You sent a like to ${userName}!`,
+        duration: 3000,
+      });
+      
+    } catch (error) {
+      console.error("Error sending like:", error);
+      toast.error("Failed to send like", {
+        description: "There was an error sending your like. Please try again.",
+        duration: 3000,
+      });
+    } finally {
+      setSendingLike(null);
+    }
   };
 
   const formatCompatibilityScore = (score: number) => {
@@ -109,9 +142,12 @@ export const HyDATEr: React.FC<HyDATErProps> = ({ onStartMessage }) => {
                   <User className="h-8 w-8 text-pink-600" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <button
+                    onClick={() => navigate(`/user/${match.user_id}`)}
+                    className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors cursor-pointer text-left"
+                  >
                     {match.display_name || "Anonymous User"}
-                  </h3>
+                  </button>
                   <p className="text-gray-600 mb-2">
                     {match.total_ratings} fountain reviews
                   </p>
@@ -193,9 +229,19 @@ export const HyDATEr: React.FC<HyDATErProps> = ({ onStartMessage }) => {
             </div>
 
             <div className="flex space-x-3">
-              <button className="flex-1 bg-pink-600 text-white py-2 px-4 rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-colors flex items-center justify-center">
-                <Heart className="h-4 w-4 mr-2" />
-                Like
+              <button 
+                onClick={() => handleLike(match.user_id, match.display_name || "Anonymous User")}
+                disabled={likedUsers.has(match.user_id) || sendingLike === match.user_id}
+                className={`flex-1 py-2 px-4 rounded-md focus:outline-none focus:ring-2 transition-colors flex items-center justify-center ${
+                  likedUsers.has(match.user_id)
+                    ? "bg-green-600 text-white cursor-not-allowed"
+                    : sendingLike === match.user_id
+                    ? "bg-gray-400 text-white cursor-not-allowed"
+                    : "bg-pink-600 text-white hover:bg-pink-700 focus:ring-pink-500"
+                }`}
+              >
+                <Heart className={`h-4 w-4 mr-2 ${likedUsers.has(match.user_id) ? "fill-current" : ""}`} />
+                {sendingLike === match.user_id ? "Sending..." : likedUsers.has(match.user_id) ? "Liked!" : "Like"}
               </button>
               <button
                 onClick={() => {

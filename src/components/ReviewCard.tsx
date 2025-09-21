@@ -6,6 +6,7 @@ import { CommentForm } from "./CommentForm";
 import type { RatingComment } from "../services/commentService";
 import type { Review } from "../services/reviewService";
 import { getRatingComments } from "../services/commentService";
+import { useNavigate } from "react-router-dom";
 
 interface ReviewCardProps {
   review: Review;
@@ -22,6 +23,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   user,
   showComments = false,
 }) => {
+  const navigate = useNavigate();
   const [comments, setComments] = useState<RatingComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const formatDate = (dateString?: string) => {
@@ -90,7 +92,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
-          <div className="h-5 w-5 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+          <button
+            onClick={() => navigate(`/user/${review.user_id}`)}
+            className="h-5 w-5 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden hover:bg-blue-200 transition-colors cursor-pointer"
+          >
             {user?.profile_picture_url ? (
               <img
                 src={user.profile_picture_url}
@@ -100,8 +105,13 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
             ) : (
               <User className="h-3 w-3 text-blue-600" />
             )}
-          </div>
-          <span className="font-medium text-gray-900">{getDisplayName()}</span>
+          </button>
+          <button
+            onClick={() => navigate(`/user/${review.user_id}`)}
+            className="font-medium text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
+          >
+            {getDisplayName()}
+          </button>
         </div>
         <div className="flex items-center space-x-1 text-sm text-gray-500">
           <Calendar className="h-4 w-4" />

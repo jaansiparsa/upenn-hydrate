@@ -29,7 +29,8 @@ import { useAuth } from "../contexts/AuthContext";
 export const UserProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
+  const { user: authUser } = useAuth();
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [profile, setProfile] = useState<{
     id: string;
     display_name?: string;
@@ -47,6 +48,7 @@ export const UserProfile: React.FC = () => {
   const [updating, setUpdating] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
+  
   const [error, setError] = useState<string | null>(null);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
@@ -480,7 +482,7 @@ export const UserProfile: React.FC = () => {
     }
   };
 
-  const isOwnProfile = currentUser?.id === id;
+  const isOwnProfile = authUser?.id === id;
 
   // Debug function to test permissions (can be called from browser console)
   const testPermissions = async () => {
@@ -566,9 +568,13 @@ export const UserProfile: React.FC = () => {
   // Fetch user profile and reviews
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!id) return;
+      if (!id) {
+        console.log("UserProfile: No user ID found, skipping fetch");
+        return;
+      }
 
       try {
+        console.log("UserProfile: Starting to fetch profile for user ID:", id);
         setLoading(true);
 
         // Fetch user profile
@@ -579,45 +585,22 @@ export const UserProfile: React.FC = () => {
           .single();
 
         if (profileError) {
+          console.log("UserProfile: Profile error:", profileError);
           if (profileError.code === "PGRST116") {
+            console.log("UserProfile: User not found in database");
             setError("User not found");
+            setLoading(false);
             return;
           }
           throw profileError;
         }
 
         if (profileData) {
+          console.log("UserProfile: Profile data found:", profileData);
           setProfile(profileData);
           setNewDisplayName(profileData.display_name || "");
 
-          // Check if current user is following this profile
-          if (currentUser && !isOwnProfile) {
-            // We need to check if the current user's following list includes this profile
-            // So we need to fetch the current user's data to check their following list
-            const { data: currentUserData, error: getUserError } =
-              await supabase
-                .from("users")
-                .select("following")
-                .eq("id", currentUser.id)
-                .single();
-
-            if (getUserError) {
-              console.error("Error fetching current user data:", getUserError);
-              setIsFollowing(false);
-            } else {
-              const isCurrentlyFollowing =
-                currentUserData.following?.includes(profileData.id) || false;
-              console.log("Follow status check on page load:", {
-                profileId: profileData.id,
-                currentUserId: currentUser.id,
-                currentUserFollowing: currentUserData.following,
-                followingType: typeof currentUserData.following,
-                followingLength: currentUserData.following?.length,
-                isFollowing: isCurrentlyFollowing,
-              });
-              setIsFollowing(isCurrentlyFollowing);
-            }
-          }
+          // Follow state check is now handled in a separate useEffect
         }
 
         // Fetch user reviews
@@ -632,13 +615,48 @@ export const UserProfile: React.FC = () => {
         console.error("Error fetching profile:", error);
         setError("Failed to load profile");
       } finally {
+        console.log("UserProfile: Setting loading to false");
         setLoading(false);
         setReviewsLoading(false);
       }
     };
 
     fetchProfile();
-  }, [id, currentUser, isOwnProfile]);
+  }, [id, isOwnProfile]);
+
+  // Fetch current user's profile data
+  useEffect(() => {
+    if (authUser) {
+      const fetchCurrentUser = async () => {
+        try {
+          const { data, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", authUser.id)
+            .single();
+          
+          if (error) throw error;
+          setCurrentUser(data);
+        } catch (error) {
+          console.error("Error fetching current user:", error);
+        }
+      };
+      
+      fetchCurrentUser();
+    } else {
+      setCurrentUser(null);
+    }
+  }, [authUser]);
+
+  // Simple follow state check when profile loads
+  useEffect(() => {
+    if (currentUser && profile && !isOwnProfile) {
+      const isCurrentlyFollowing = currentUser.following?.includes(profile.id) || false;
+      setIsFollowing(isCurrentlyFollowing);
+    } else {
+      setIsFollowing(false);
+    }
+  }, [currentUser, profile, isOwnProfile]);
 
   const handleUpdateDisplayName = async () => {
     if (!currentUser || !profile || !isOwnProfile) return;
@@ -664,160 +682,91 @@ export const UserProfile: React.FC = () => {
     }
   };
 
+
   const handleFollow = async () => {
     if (!currentUser || !profile || isOwnProfile) return;
 
-    console.log("Follow button clicked:", {
-      isFollowing,
-      profileId: profile.id,
-      currentUserId: currentUser.id,
-      followers: profile.followers,
-    });
-
     setFollowLoading(true);
+    
     try {
       if (isFollowing) {
-        // Unfollow: Remove current user from profile's followers and remove profile from current user's following
-        // Check if actually following before attempting removal
-        if (profile.followers?.includes(currentUser.id)) {
-          const { error: removeFollowerError } = await supabase
-            .from("users")
-            .update({
-              followers: profile.followers.filter(
-                (followerId) => followerId !== currentUser.id
-              ),
-            })
-            .eq("id", profile.id);
-
-          if (removeFollowerError) throw removeFollowerError;
-        }
-
-        // Get current user's following list and remove the profile user
-        const { data: currentUserData, error: getUserError } = await supabase
+        // Unfollow: Remove from both arrays
+        const newFollowers = profile.followers?.filter(id => id !== currentUser.id) || [];
+        const newFollowing = currentUser.following?.filter(id => id !== profile.id) || [];
+        
+        // Update profile's followers
+        const { error: profileError } = await supabase
           .from("users")
-          .select("following")
-          .eq("id", currentUser.id)
-          .single();
-
-        if (getUserError) throw getUserError;
-
-        // Check if actually following before attempting removal
-        if (currentUserData.following?.includes(profile.id)) {
-          const { error: removeFollowingError } = await supabase
-            .from("users")
-            .update({
-              following: currentUserData.following.filter(
-                (followingId: string) => followingId !== profile.id
-              ),
-            })
-            .eq("id", currentUser.id);
-
-          if (removeFollowingError) throw removeFollowingError;
-        }
-
+          .update({ followers: newFollowers })
+          .eq("id", profile.id);
+        
+        if (profileError) throw profileError;
+        
+        // Update current user's following
+        const { error: userError } = await supabase
+          .from("users")
+          .update({ following: newFollowing })
+          .eq("id", currentUser.id);
+        
+        if (userError) throw userError;
+        
+        // Update local state
         setIsFollowing(false);
-        console.log("Setting isFollowing to false after unfollow action");
-        setProfile((prev) =>
-          prev
-            ? {
-                ...prev,
-                followers:
-                  prev.followers?.filter(
-                    (followerId) => followerId !== currentUser.id
-                  ) || [],
-              }
-            : null
-        );
+        setProfile(prev => prev ? { ...prev, followers: newFollowers } : null);
+        setCurrentUser(prev => prev ? { ...prev, following: newFollowing } : null);
+        
       } else {
-        // Follow: Add current user to profile's followers and add profile to current user's following
-        // Check if already following to prevent duplicates
-        if (!profile.followers?.includes(currentUser.id)) {
-          console.log("Adding follower to database:", {
-            profileId: profile.id,
-            currentUserId: currentUser.id,
-            currentFollowers: profile.followers,
-            newFollowers: [...(profile.followers || []), currentUser.id],
-          });
-
-          const { error: addFollowerError } = await supabase
-            .from("users")
-            .update({
-              followers: [...(profile.followers || []), currentUser.id],
-            })
-            .eq("id", profile.id);
-
-          if (addFollowerError) {
-            console.error("Error adding follower:", addFollowerError);
-            throw addFollowerError;
-          }
-
-          console.log("Successfully added follower to database");
-        } else {
-          console.log(
-            "User already in followers list, skipping database update"
-          );
-        }
-
-        // Get current user's following list and add the profile user
-        const { data: currentUserData, error: getUserError } = await supabase
+        // Follow: Add to both arrays
+        const newFollowers = [...(profile.followers || []), currentUser.id];
+        const newFollowing = [...(currentUser.following || []), profile.id];
+        
+        // Update profile's followers
+        const { error: profileError } = await supabase
           .from("users")
-          .select("following")
-          .eq("id", currentUser.id)
-          .single();
-
-        if (getUserError) throw getUserError;
-
-        // Check if already in following list to prevent duplicates
-        if (!currentUserData.following?.includes(profile.id)) {
-          const { error: addFollowingError } = await supabase
-            .from("users")
-            .update({
-              following: [...(currentUserData.following || []), profile.id],
-            })
-            .eq("id", currentUser.id);
-
-          if (addFollowingError) throw addFollowingError;
-        }
-
+          .update({ followers: newFollowers })
+          .eq("id", profile.id);
+        
+        if (profileError) throw profileError;
+        
+        // Update current user's following
+        const { error: userError } = await supabase
+          .from("users")
+          .update({ following: newFollowing })
+          .eq("id", currentUser.id);
+        
+        if (userError) throw userError;
+        
+        // Update local state
         setIsFollowing(true);
-        console.log("Setting isFollowing to true after follow action");
-        setProfile((prev) =>
-          prev
-            ? {
-                ...prev,
-                followers: [...(prev.followers || []), currentUser.id],
-              }
-            : null
-        );
+        setProfile(prev => prev ? { ...prev, followers: newFollowers } : null);
+        setCurrentUser(prev => prev ? { ...prev, following: newFollowing } : null);
       }
-
-      // Refresh the profile data to get accurate counts
-      const { data: updatedProfile, error: refreshError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (!refreshError && updatedProfile) {
-        setProfile(updatedProfile);
-      }
-
-      // Check for new badges after follow action
+      
+      // Check for new badges
       if (currentUser) {
         const newBadges = await checkAndAwardBadges(
           currentUser.id,
           "user_followed",
-          {}
+          { targetUserId: profile.id }
         );
-        newBadges.forEach((badgeName) => {
-          showBadgeEarned(
-            badgeName,
-            "🤝",
-            `You earned the ${badgeName} badge!`,
-            "bronze"
-          );
-        });
+        if (newBadges.length > 0) {
+          newBadges.forEach((badgeName) => {
+            toast.success(`You earned the ${badgeName} badge!`, "bronze");
+          });
+          
+          // Refresh current user data to show new badges
+          const { data: refreshedUser } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", currentUser.id)
+            .single();
+          
+          if (refreshedUser) {
+            setCurrentUser(refreshedUser);
+          }
+        }
       }
+      
     } catch (error) {
       console.error("Error updating follow status:", error);
       setError("Failed to update follow status");
@@ -1066,7 +1015,7 @@ export const UserProfile: React.FC = () => {
         )}
 
         {/* Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 justify-items-center">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}
@@ -1084,18 +1033,6 @@ export const UserProfile: React.FC = () => {
               {consumptionData?.bottles_saved || 0}
             </div>
             <div className="text-xs text-gray-600">Bottles Saved</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {profile.followers?.length || 0}
-            </div>
-            <div className="text-xs text-gray-600">Followers</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-indigo-600">
-              {profile.following?.length || 0}
-            </div>
-            <div className="text-xs text-gray-600">Following</div>
           </div>
         </div>
 

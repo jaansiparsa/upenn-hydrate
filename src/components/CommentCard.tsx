@@ -16,6 +16,7 @@ import {
 
 import type { RatingComment } from "../services/commentService";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface CommentCardProps {
   comment: RatingComment;
@@ -29,6 +30,7 @@ export const CommentCard: React.FC<CommentCardProps> = ({
   onCommentDelete,
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(comment.comment_text);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -128,9 +130,12 @@ export const CommentCard: React.FC<CommentCardProps> = ({
       <div className="flex-1 min-w-0">
         {/* Header */}
         <div className="flex items-center space-x-2 mb-1">
-          <span className="font-semibold text-gray-900 text-sm">
+          <button
+            onClick={() => navigate(`/user/${comment.user_id}`)}
+            className="font-semibold text-gray-900 text-sm hover:text-blue-600 transition-colors cursor-pointer"
+          >
             {displayName}
-          </span>
+          </button>
           <span className="text-gray-500 text-sm">
             {formatDate(comment.created_at)}
           </span>

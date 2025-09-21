@@ -1,15 +1,27 @@
-import { Calendar, Edit3, Save, Star, User, X } from "lucide-react";
+import {
+  Calendar,
+  Edit3,
+  Save,
+  Star,
+  User,
+  UserCheck,
+  Users,
+  X,
+} from "lucide-react";
 import React, { useEffect, useState } from "react";
 
+import { BadgeDisplay } from "./BadgeDisplay";
 import type { Review } from "../services/reviewService";
 import { ReviewCard } from "./ReviewCard";
 import { drinksService } from "../services/drinksService";
 import { getUserReviews } from "../services/reviewService";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export const Profile: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<{
     display_name?: string;
     email?: string;
@@ -32,13 +44,36 @@ export const Profile: React.FC = () => {
     total_drinks: number;
     bottles_saved: number;
   } | null>(null);
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
+  const [followersList, setFollowersList] = useState<
+    Array<{
+      id: string;
+      display_name?: string;
+      email?: string;
+      profile_picture_url?: string;
+    }>
+  >([]);
+  const [followingList, setFollowingList] = useState<
+    Array<{
+      id: string;
+      display_name?: string;
+      email?: string;
+      profile_picture_url?: string;
+    }>
+  >([]);
+  const [loadingLists, setLoadingLists] = useState(false);
 
   // Fetch user profile and reviews
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!user) return;
+      if (!user) {
+        console.log("Profile: No user found, skipping fetch");
+        return;
+      }
 
       try {
+        console.log("Profile: Starting to fetch profile for user:", user.id);
         setLoading(true);
 
         // Fetch user profile
@@ -84,19 +119,24 @@ export const Profile: React.FC = () => {
         }
 
         // Fetch user reviews
+        console.log("Profile: Fetching user reviews...");
         setReviewsLoading(true);
         const userReviews = await getUserReviews(user.id);
         setReviews(userReviews);
+        console.log("Profile: User reviews fetched:", userReviews.length);
 
         // Fetch user consumption data
+        console.log("Profile: Fetching consumption data...");
         const consumption = await drinksService.getUserTotalConsumption(
           user.id
         );
         setConsumptionData(consumption);
+        console.log("Profile: Consumption data fetched:", consumption);
       } catch (error) {
         console.error("Error fetching profile:", error);
         setError("Failed to load profile");
       } finally {
+        console.log("Profile: Setting loading to false");
         setLoading(false);
         setReviewsLoading(false);
       }
@@ -146,6 +186,65 @@ export const Profile: React.FC = () => {
     return totalRating / reviews.length;
   };
 
+  // Fetch followers list
+  const fetchFollowersList = async () => {
+    if (!profile?.followers?.length) {
+      setFollowersList([]);
+      return;
+    }
+
+    try {
+      setLoadingLists(true);
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, display_name, email, profile_picture_url")
+        .in("id", profile.followers);
+
+      if (error) throw error;
+      setFollowersList(data || []);
+    } catch (error) {
+      console.error("Error fetching followers list:", error);
+      setFollowersList([]);
+    } finally {
+      setLoadingLists(false);
+    }
+  };
+
+  // Fetch following list
+  const fetchFollowingList = async () => {
+    if (!profile?.following?.length) {
+      setFollowingList([]);
+      return;
+    }
+
+    try {
+      setLoadingLists(true);
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, display_name, email, profile_picture_url")
+        .in("id", profile.following);
+
+      if (error) throw error;
+      setFollowingList(data || []);
+    } catch (error) {
+      console.error("Error fetching following list:", error);
+      setFollowingList([]);
+    } finally {
+      setLoadingLists(false);
+    }
+  };
+
+  // Handle opening followers modal
+  const handleShowFollowers = async () => {
+    setShowFollowersModal(true);
+    await fetchFollowersList();
+  };
+
+  // Handle opening following modal
+  const handleShowFollowing = async () => {
+    setShowFollowingModal(true);
+    await fetchFollowingList();
+  };
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -231,7 +330,31 @@ export const Profile: React.FC = () => {
                   </button>
                 </div>
               )}
-              <p className="text-gray-600 mt-1">{profile.email}</p>
+              <div className="flex items-center space-x-4 mt-1">
+                <p className="text-gray-600">{profile.email}</p>
+                <div className="flex items-center space-x-3 text-sm">
+                  <button
+                    onClick={handleShowFollowers}
+                    className="flex items-center space-x-1 text-green-600 hover:text-green-700 transition-colors"
+                  >
+                    <Users className="w-4 h-4" />
+                    <span className="font-medium">
+                      {profile.followers?.length || 0}
+                    </span>
+                    <span className="text-gray-500">followers</span>
+                  </button>
+                  <button
+                    onClick={handleShowFollowing}
+                    className="flex items-center space-x-1 text-purple-600 hover:text-purple-700 transition-colors"
+                  >
+                    <UserCheck className="w-4 h-4" />
+                    <span className="font-medium">
+                      {profile.following?.length || 0}
+                    </span>
+                    <span className="text-gray-500">following</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -256,18 +379,19 @@ export const Profile: React.FC = () => {
             </div>
             <div className="text-xs text-gray-600">Bottles Saved</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {profile.followers?.length || 0}
-            </div>
-            <div className="text-xs text-gray-600">Followers</div>
+        </div>
+
+        {/* Quick Badge Preview */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700">Recent Badges</h3>
+            <span className="text-xs text-gray-500">View all badges below</span>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-indigo-600">
-              {profile.following?.length || 0}
-            </div>
-            <div className="text-xs text-gray-600">Following</div>
-          </div>
+          <BadgeDisplay
+            userId={user?.id || ""}
+            showProgress={false}
+            compact={true}
+          />
         </div>
       </div>
 
@@ -350,6 +474,142 @@ export const Profile: React.FC = () => {
       {error && (
         <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-3">
           <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
+
+      {/* Followers Modal */}
+      {showFollowersModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                <Users className="w-5 h-5 mr-2 text-green-600" />
+                Followers ({profile?.followers?.length || 0})
+              </h2>
+              <button
+                onClick={() => setShowFollowersModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {loadingLists ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
+                <span className="ml-2 text-gray-600">Loading followers...</span>
+              </div>
+            ) : followersList.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No followers yet.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {followersList.map((follower) => (
+                  <div
+                    key={follower.id}
+                    onClick={() => {
+                      console.log(
+                        "Profile: Navigating to follower profile:",
+                        follower.id
+                      );
+                      setShowFollowersModal(false);
+                      navigate(`/user/${follower.id}`);
+                    }}
+                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+                      {follower.profile_picture_url ? (
+                        <img
+                          src={follower.profile_picture_url}
+                          alt="Profile"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-4 w-4 text-blue-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {follower.display_name || "User"}
+                      </p>
+                      <p className="text-sm text-gray-500 truncate">
+                        {follower.email}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Following Modal */}
+      {showFollowingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                <UserCheck className="w-5 h-5 mr-2 text-purple-600" />
+                Following ({profile?.following?.length || 0})
+              </h2>
+              <button
+                onClick={() => setShowFollowingModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {loadingLists ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                <span className="ml-2 text-gray-600">Loading following...</span>
+              </div>
+            ) : followingList.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Not following anyone yet.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {followingList.map((following) => (
+                  <div
+                    key={following.id}
+                    onClick={() => {
+                      console.log(
+                        "Profile: Navigating to following profile:",
+                        following.id
+                      );
+                      setShowFollowingModal(false);
+                      navigate(`/user/${following.id}`);
+                    }}
+                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden">
+                      {following.profile_picture_url ? (
+                        <img
+                          src={following.profile_picture_url}
+                          alt="Profile"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-4 w-4 text-blue-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {following.display_name || "User"}
+                      </p>
+                      <p className="text-sm text-gray-500 truncate">
+                        {following.email}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

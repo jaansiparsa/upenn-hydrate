@@ -16,7 +16,6 @@ export const Profile: React.FC = () => {
     display_name?: string;
     email?: string;
     total_ratings: number;
-    badges: string[];
     profile_picture_url?: string;
     followers: string[];
     following: string[];
@@ -94,7 +93,6 @@ export const Profile: React.FC = () => {
                   user.email?.split("@")[0] ||
                   "User",
                 total_ratings: 0,
-                badges: [],
                 followers: [],
                 following: [],
               },
@@ -248,7 +246,6 @@ export const Profile: React.FC = () => {
     setShowFollowingModal(true);
     await fetchFollowingList();
   };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -364,7 +361,7 @@ export const Profile: React.FC = () => {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}
@@ -384,10 +381,16 @@ export const Profile: React.FC = () => {
             <div className="text-xs text-gray-600">Bottles Saved</div>
           </div>
           <div className="text-center">
-            <div className="text-sm text-gray-600">Badges</div>
-            <div className="text-xs text-gray-500 mt-1">
-              {getBadgeDisplay(profile.badges)}
+            <div className="text-2xl font-bold text-purple-600">
+              {profile.followers?.length || 0}
             </div>
+            <div className="text-xs text-gray-600">Followers</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-indigo-600">
+              {profile.following?.length || 0}
+            </div>
+            <div className="text-xs text-gray-600">Following</div>
           </div>
         </div>
       </div>

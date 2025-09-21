@@ -12,9 +12,10 @@ import {
   X,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { AddFountainForm } from "./AddFountainForm";
+import { DropletsIcon } from "./DropletsIcon";
 import { Feed } from "./Feed";
 import type { Fountain } from "../services/fountainService";
 import { FountainSearchModal } from "./FountainSearchModal";
@@ -23,12 +24,12 @@ import { Leaderboard } from "./Leaderboard";
 import { Map } from "./Map";
 import { Messages } from "./Messages";
 import { useAuth } from "../contexts/AuthContext";
-import { DropletsIcon } from "./DropletsIcon";
 
 export const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<
     "fountains" | "feed" | "leaderboard" | "hydater" | "messages" | "profile"
   >("fountains");
@@ -62,8 +63,13 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleStartMessage = (userId: string, userName?: string) => {
+    console.log("handleStartMessage called:", { userId, userName });
     setSelectedMessageUser({ userId, userName });
     setActiveTab("messages");
+    console.log("Set active tab to messages and selected user:", {
+      userId,
+      userName,
+    });
   };
 
   const handleSignOut = async () => {
@@ -75,11 +81,84 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Handle URL parameters for navigation from PlanDate page
+  // Handle URL parameters and navigation state for navigation from PlanDate page
   useEffect(() => {
+    console.log(
+      "Dashboard useEffect triggered, location.state:",
+      location.state
+    );
+
+    // Check for pending message from localStorage (from PlanDate page)
+    const pendingMessage = localStorage.getItem("pendingMessage");
+    if (pendingMessage) {
+      try {
+        const { userId, userName, timestamp } = JSON.parse(pendingMessage);
+        console.log("Dashboard pending message from localStorage:", {
+          userId,
+          userName,
+          timestamp,
+        });
+
+        // Check if the message is recent (within last 30 seconds)
+        if (Date.now() - timestamp < 30000) {
+          console.log(
+            "Setting active tab to messages and selected user from localStorage"
+          );
+          setActiveTab("messages");
+          setSelectedMessageUser({ userId, userName: userName || undefined });
+
+          // Clear the pending message
+          localStorage.removeItem("pendingMessage");
+          return;
+        } else {
+          // Clear old pending message
+          localStorage.removeItem("pendingMessage");
+        }
+      } catch (error) {
+        console.error("Error parsing pending message:", error);
+        localStorage.removeItem("pendingMessage");
+      }
+    }
+
+    // Check for navigation state first (from PlanDate page)
+    if (location.state) {
+      const { tab, userId, userName } = location.state as any;
+      console.log("Dashboard navigation state:", { tab, userId, userName });
+
+      if (
+        tab &&
+        [
+          "fountains",
+          "feed",
+          "leaderboard",
+          "hydater",
+          "messages",
+          "profile",
+        ].includes(tab)
+      ) {
+        console.log("Setting active tab from state to:", tab);
+        setActiveTab(tab as any);
+      }
+
+      if (userId && tab === "messages") {
+        console.log("Setting selected message user from state:", {
+          userId,
+          userName,
+        });
+        setSelectedMessageUser({ userId, userName: userName || undefined });
+      }
+
+      // Clear the state to prevent re-triggering
+      navigate(location.pathname, { replace: true, state: null });
+      return;
+    }
+
+    // Fallback to URL parameters
     const tab = searchParams.get("tab");
     const userId = searchParams.get("userId");
     const userName = searchParams.get("userName");
+
+    console.log("Dashboard URL params:", { tab, userId, userName });
 
     if (
       tab &&
@@ -92,6 +171,7 @@ export const Dashboard: React.FC = () => {
         "profile",
       ].includes(tab)
     ) {
+      console.log("Setting active tab to:", tab);
       setActiveTab(
         tab as
           | "fountains"
@@ -104,9 +184,10 @@ export const Dashboard: React.FC = () => {
     }
 
     if (userId && tab === "messages") {
+      console.log("Setting selected message user:", { userId, userName });
       setSelectedMessageUser({ userId, userName: userName || undefined });
     }
-  }, [searchParams]);
+  }, [searchParams, location, navigate]);
 
   // Show add fountain form if requested
   if (showAddForm) {
@@ -121,7 +202,10 @@ export const Dashboard: React.FC = () => {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold">
+                <button
+                  onClick={() => setActiveTab("fountains")}
+                  className="text-2xl font-bold hover:opacity-80 transition-opacity cursor-pointer"
+                >
                   <span style={{ color: "#DBE5FF" }}>H</span>
                   <span style={{ color: "#A9BDF1" }}>y</span>
                   <span style={{ color: "#88A3E9" }}>d</span>
@@ -129,7 +213,7 @@ export const Dashboard: React.FC = () => {
                   <span style={{ color: "#0F44CD" }}>a</span>
                   <span style={{ color: "#0836AB" }}>t</span>
                   <span style={{ color: "#062472" }}>e</span>
-                </h1>
+                </button>
               </div>
             </div>
 

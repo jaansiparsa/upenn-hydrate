@@ -156,7 +156,9 @@ export const HyDATEr: React.FC<HyDATErProps> = ({ onStartMessage }) => {
                   </span>
                   <span className="text-sm font-medium">
                     {Math.round(
-                      match.compatibility_breakdown.correlation_score * 100
+                      Math.abs(
+                        match.compatibility_breakdown.correlation_score
+                      ) * 100
                     )}
                     %
                   </span>
@@ -196,9 +198,14 @@ export const HyDATEr: React.FC<HyDATErProps> = ({ onStartMessage }) => {
                 Like
               </button>
               <button
-                onClick={() =>
-                  onStartMessage?.(match.user_id, match.display_name)
-                }
+                onClick={() => {
+                  console.log(
+                    "Message button clicked for user:",
+                    match.user_id,
+                    match.display_name
+                  );
+                  onStartMessage?.(match.user_id, match.display_name);
+                }}
                 className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors flex items-center justify-center"
               >
                 <MessageCircle className="h-4 w-4 mr-2" />

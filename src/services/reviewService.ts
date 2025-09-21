@@ -1,3 +1,4 @@
+import { checkReviewBasedBadges } from "./badgeService";
 import { supabase } from "../lib/supabase";
 
 export interface Review {
@@ -130,7 +131,7 @@ export const createReview = async (
   }
 
   // First, ensure the user exists in the users table
-  const { data: _userData, error: userError } = await supabase
+  const { error: userError } = await supabase
     .from("users")
     .select("id")
     .eq("id", user.id)
@@ -192,6 +193,22 @@ export const createReview = async (
     console.error("User ID:", user.id);
     throw error;
   }
+
+  // Check and award badges after successful review creation
+  try {
+    const newBadges = await checkReviewBasedBadges(user.id, {
+      review_id: data.id,
+      ...reviewData,
+    });
+
+    if (newBadges.length > 0) {
+      console.log("New badges earned:", newBadges);
+    }
+  } catch (badgeError) {
+    console.error("Error checking badges after review creation:", badgeError);
+    // Don't throw here - review creation was successful
+  }
+
   return data as Review;
 };
 

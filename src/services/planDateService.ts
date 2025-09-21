@@ -1,3 +1,4 @@
+import { calculateCompatibility } from "./datingService";
 import { supabase } from "../lib/supabase";
 
 export interface TopFountain {
@@ -14,6 +15,7 @@ export interface PlanDateData {
   user2TopFountains: TopFountain[];
   suggestedLocation?: TopFountain;
   compatibilityScore: number;
+  user2DisplayName?: string;
 }
 
 // Get top-rated fountains for a user
@@ -99,10 +101,17 @@ export async function getPlanDateData(
   user2Id: string
 ): Promise<PlanDateData> {
   try {
-    const [user1TopFountains, user2TopFountains] = await Promise.all([
-      getUserTopFountains(user1Id),
-      getUserTopFountains(user2Id),
-    ]);
+    const [user1TopFountains, user2TopFountains, user2Data] = await Promise.all(
+      [
+        getUserTopFountains(user1Id),
+        getUserTopFountains(user2Id),
+        supabase
+          .from("users")
+          .select("display_name")
+          .eq("id", user2Id)
+          .single(),
+      ]
+    );
 
     // Find common fountains or suggest the highest rated fountain
     const user1FountainIds = new Set(
@@ -138,65 +147,19 @@ export async function getPlanDateData(
       );
     }
 
-    // Calculate a simple compatibility score based on fountain preferences
-    const compatibilityScore = calculateFountainCompatibility(
-      user1TopFountains,
-      user2TopFountains
-    );
+    // Calculate compatibility using the same algorithm as hyDATEr
+    const compatibilityData = await calculateCompatibility(user1Id, user2Id);
+    const compatibilityScore = compatibilityData.overall_compatibility;
 
     return {
       user1TopFountains,
       user2TopFountains,
       suggestedLocation,
       compatibilityScore,
+      user2DisplayName: user2Data.data?.display_name,
     };
   } catch (error) {
     console.error("Error getting plan date data:", error);
     throw error;
   }
-}
-
-// Calculate compatibility based on fountain rating patterns
-function calculateFountainCompatibility(
-  user1Fountains: TopFountain[],
-  user2Fountains: TopFountain[]
-): number {
-  if (user1Fountains.length === 0 || user2Fountains.length === 0) {
-    return 0;
-  }
-
-  // Find common fountains
-  const user1FountainIds = new Set(user1Fountains.map((f) => f.fountain_id));
-  const commonFountains = user2Fountains.filter((f) =>
-    user1FountainIds.has(f.fountain_id)
-  );
-
-  if (commonFountains.length === 0) {
-    return 0.3; // Low compatibility if no common fountains
-  }
-
-  // Calculate correlation for common fountains
-  let correlationSum = 0;
-  let count = 0;
-
-  commonFountains.forEach((fountain) => {
-    const user1Rating =
-      user1Fountains.find((f) => f.fountain_id === fountain.fountain_id)
-        ?.average_rating || 0;
-    const user2Rating = fountain.average_rating;
-
-    // Simple correlation: how close are their ratings?
-    const ratingDiff = Math.abs(user1Rating - user2Rating);
-    const correlation = Math.max(0, 1 - ratingDiff / 5); // Normalize by max rating difference
-
-    correlationSum += correlation;
-    count++;
-  });
-
-  const averageCorrelation = correlationSum / count;
-
-  // Boost score if they have many common fountains
-  const commonFountainBonus = Math.min(0.3, commonFountains.length * 0.05);
-
-  return Math.min(1, averageCorrelation + commonFountainBonus);
 }

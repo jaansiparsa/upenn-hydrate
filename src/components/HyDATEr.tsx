@@ -138,8 +138,16 @@ export const HyDATEr: React.FC<HyDATErProps> = ({ onStartMessage }) => {
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center space-x-4">
-                <div className="h-16 w-16 bg-pink-100 rounded-full flex items-center justify-center">
-                  <User className="h-8 w-8 text-pink-600" />
+                <div className="h-16 w-16 bg-pink-100 rounded-full flex items-center justify-center overflow-hidden">
+                  {match.profile_picture_url ? (
+                    <img
+                      src={match.profile_picture_url}
+                      alt={match.display_name || "User"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-8 w-8 text-pink-600" />
+                  )}
                 </div>
                 <div>
                   <button

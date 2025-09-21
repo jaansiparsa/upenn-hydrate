@@ -20,6 +20,7 @@ export interface Match {
   user_id: string;
   display_name?: string;
   email?: string;
+  profile_picture_url?: string;
   total_ratings: number;
   badges: string[];
   compatibility_score: number;
@@ -241,7 +242,7 @@ export async function getUserMatches(userId: string): Promise<Match[]> {
   // Get all other users who have rated fountains
   const { data: allUsers, error: usersError } = await supabase
     .from("users")
-    .select("id, display_name, email, total_ratings, badges")
+    .select("id, display_name, email, profile_picture_url, total_ratings, badges")
     .neq("id", userId)
     .gt("total_ratings", 0); // Only users who have rated fountains
 
@@ -270,6 +271,7 @@ export async function getUserMatches(userId: string): Promise<Match[]> {
           user_id: user.id,
           display_name: user.display_name,
           email: user.email,
+          profile_picture_url: user.profile_picture_url,
           total_ratings: user.total_ratings,
           badges: user.badges,
           compatibility_score: compatibility.overall_compatibility,

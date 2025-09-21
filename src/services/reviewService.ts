@@ -429,3 +429,26 @@ export const getUserVoteStatus = async (
     return "none";
   }
 };
+
+// Test function to check ratings table access
+export const testRatingsTable = async (): Promise<void> => {
+  console.log("Testing ratings table access...");
+
+  try {
+    // Try a simple query first
+    const { data, error } = await supabase
+      .from("ratings")
+      .select("id")
+      .limit(1);
+
+    if (error) {
+      console.error("Ratings table test failed:", error);
+      throw error;
+    }
+
+    console.log("Ratings table test successful:", data);
+  } catch (error) {
+    console.error("Error testing ratings table:", error);
+    throw error;
+  }
+};

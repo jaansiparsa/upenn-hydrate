@@ -35,12 +35,17 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
 
   // Update local comments when props change
   useEffect(() => {
+    console.log("ReviewItem: Comments prop changed:", {
+      reviewId: review.id,
+      commentsLength: comments.length,
+      comments: comments,
+    });
     setLocalComments(comments);
-  }, [comments]);
+  }, [comments, review.id]);
 
   const loadComments = useCallback(async () => {
-    // Only load if we don't have comments already
-    if (localComments.length > 0) return;
+    // Only load if we don't have comments already and no comments were passed as props
+    if (localComments.length > 0 || comments.length > 0) return;
 
     setLoadingComments(true);
     try {
@@ -51,14 +56,23 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
     } finally {
       setLoadingComments(false);
     }
-  }, [review.id, localComments.length]);
+  }, [review.id, localComments.length, comments.length]);
 
   // Load comments when comments section is opened
   useEffect(() => {
-    if (showCommentsSection && localComments.length === 0) {
+    if (
+      showCommentsSection &&
+      localComments.length === 0 &&
+      comments.length === 0
+    ) {
       loadComments();
     }
-  }, [showCommentsSection, localComments.length, loadComments]);
+  }, [
+    showCommentsSection,
+    localComments.length,
+    comments.length,
+    loadComments,
+  ]);
 
   const handleCommentCreated = (newComment: RatingComment) => {
     setLocalComments((prev) => [...prev, newComment]);
@@ -88,21 +102,13 @@ export const ReviewItem: React.FC<ReviewItemProps> = ({
         <div className="flex items-center space-x-3">
           <button
             onClick={() => navigate(`/user/${review.user_id}`)}
-            className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors cursor-pointer overflow-hidden"
+            className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors cursor-pointer"
           >
-            {review.users?.profile_picture_url ? (
-              <img
-                src={review.users.profile_picture_url}
-                alt={review.users?.display_name || "User"}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-sm font-medium text-blue-600">
-                {review.users?.display_name?.charAt(0) ||
-                  review.users?.email?.charAt(0) ||
-                  "U"}
-              </span>
-            )}
+            <span className="text-sm font-medium text-blue-600">
+              {review.users?.display_name?.charAt(0) ||
+                review.users?.email?.charAt(0) ||
+                "U"}
+            </span>
           </button>
           <div>
             <button

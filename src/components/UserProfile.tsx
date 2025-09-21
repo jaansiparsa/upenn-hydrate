@@ -721,17 +721,10 @@ export const UserProfile: React.FC = () => {
 
         // Update local state
         setIsFollowing(false);
-<<<<<<< HEAD
-        setProfile((prev) =>
-          prev ? { ...prev, followers: newFollowers } : null
-        );
-        setCurrentUser((prev: any) =>
-=======
         setProfile((prev: UserProfileType | null) =>
           prev ? { ...prev, followers: newFollowers } : null
         );
         setCurrentUser((prev: UserProfileType | null) =>
->>>>>>> main
           prev ? { ...prev, following: newFollowing } : null
         );
       } else {

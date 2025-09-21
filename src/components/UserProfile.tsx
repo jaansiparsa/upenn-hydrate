@@ -565,9 +565,13 @@ export const UserProfile: React.FC = () => {
   // Fetch user profile and reviews
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!id) return;
+      if (!id) {
+        console.log("UserProfile: No user ID found, skipping fetch");
+        return;
+      }
 
       try {
+        console.log("UserProfile: Starting to fetch profile for user ID:", id);
         setLoading(true);
 
         // Fetch user profile
@@ -578,14 +582,18 @@ export const UserProfile: React.FC = () => {
           .single();
 
         if (profileError) {
+          console.log("UserProfile: Profile error:", profileError);
           if (profileError.code === "PGRST116") {
+            console.log("UserProfile: User not found in database");
             setError("User not found");
+            setLoading(false);
             return;
           }
           throw profileError;
         }
 
         if (profileData) {
+          console.log("UserProfile: Profile data found:", profileData);
           setProfile(profileData);
           setNewDisplayName(profileData.display_name || "");
 
@@ -631,6 +639,7 @@ export const UserProfile: React.FC = () => {
         console.error("Error fetching profile:", error);
         setError("Failed to load profile");
       } finally {
+        console.log("UserProfile: Setting loading to false");
         setLoading(false);
         setReviewsLoading(false);
       }
@@ -1076,7 +1085,7 @@ export const UserProfile: React.FC = () => {
         )}
 
         {/* Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}
@@ -1095,19 +1104,6 @@ export const UserProfile: React.FC = () => {
             </div>
             <div className="text-xs text-gray-600">Bottles Saved</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">
-              {profile.followers?.length || 0}
-            </div>
-            <div className="text-xs text-gray-600">Followers</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-indigo-600">
-              {profile.following?.length || 0}
-            </div>
-            <div className="text-xs text-gray-600">Following</div>
-          </div>
-
           <div className="text-center bg-gray-50 rounded-lg p-4">
             <div className="flex items-center justify-center mb-2">
               <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mr-2">

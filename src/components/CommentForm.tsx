@@ -1,15 +1,7 @@
 import React, { useState } from "react";
 
 import type { RatingComment } from "../services/commentService";
-import { 
-  Bold, 
-  Italic, 
-  Underline, 
-  Paperclip, 
-  Image, 
-  Smile, 
-  AtSign 
-} from "lucide-react";
+import { Send } from "lucide-react";
 import { createComment } from "../services/commentService";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -29,8 +21,18 @@ export const CommentForm: React.FC<CommentFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!commentText.trim() || !user) return;
+    if (!commentText.trim() || !user) {
+      console.log("Comment submission blocked:", {
+        commentText: commentText.trim(),
+        user: !!user,
+      });
+      return;
+    }
 
+    console.log("Submitting comment:", {
+      ratingId,
+      commentText: commentText.trim(),
+    });
     setIsSubmitting(true);
     try {
       const newComment = await createComment({
@@ -38,10 +40,13 @@ export const CommentForm: React.FC<CommentFormProps> = ({
         comment_text: commentText.trim(),
       });
 
+      console.log("Comment created successfully:", newComment);
       onCommentCreated(newComment);
       setCommentText("");
     } catch (error) {
       console.error("Error creating comment:", error);
+      // Show user-friendly error message
+      alert("Failed to create comment. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -58,100 +63,53 @@ export const CommentForm: React.FC<CommentFormProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Comment Input Area */}
-        <div className="space-y-3">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white rounded-lg p-4 border border-gray-200"
+    >
+      <div className="space-y-3">
+        <div>
+          <label
+            htmlFor="comment"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Add a comment
+          </label>
           <textarea
             id="comment"
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Add comment..."
-            className="w-full p-4 bg-gray-50 border-0 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 text-gray-900 placeholder-gray-500"
-            rows={4}
+            placeholder="Share your thoughts about this review..."
+            className="w-full p-3 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            rows={3}
             maxLength={1000}
             required
           />
-          
-          {/* Formatting Toolbar */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {/* Formatting Options */}
-              <div className="flex items-center space-x-2">
-                <button
-                  type="button"
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                  title="Bold"
-                >
-                  <Bold className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                  title="Italic"
-                >
-                  <Italic className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                  title="Underline"
-                >
-                  <Underline className="h-4 w-4" />
-                </button>
-                
-                {/* Separator */}
-                <div className="w-px h-6 bg-gray-300"></div>
-                
-                <button
-                  type="button"
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                  title="Attach file"
-                >
-                  <Paperclip className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                  title="Add image"
-                >
-                  <Image className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                  title="Add emoji"
-                >
-                  <Smile className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                  title="Mention someone"
-                >
-                  <AtSign className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting || !commentText.trim()}
-              className="inline-flex items-center px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Submitting...
-                </>
-              ) : (
-                "Submit"
-              )}
-            </button>
-          </div>
         </div>
-      </form>
-    </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-gray-500">
+            {commentText.length}/1000 characters
+          </span>
+          <button
+            type="submit"
+            disabled={isSubmitting || !commentText.trim()}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Posting...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Post Comment
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </form>
   );
 };

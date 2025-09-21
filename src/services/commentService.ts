@@ -62,13 +62,18 @@ export const getRatingComments = async (
 export const createComment = async (
   commentData: CreateCommentData
 ): Promise<RatingComment> => {
+  console.log("createComment called with:", commentData);
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
+    console.error("No authenticated user found");
     throw new Error("User must be authenticated to create a comment");
   }
+
+  console.log("Authenticated user:", user.id);
 
   const { data, error } = await supabase
     .from("rating_comments")
@@ -86,12 +91,16 @@ export const createComment = async (
     throw error;
   }
 
+  console.log("Comment inserted successfully:", data);
+
   // Fetch user data separately
   const { data: userData } = await supabase
     .from("users")
     .select("display_name, email")
     .eq("id", data.user_id)
     .single();
+
+  console.log("User data fetched:", userData);
 
   return {
     ...data,

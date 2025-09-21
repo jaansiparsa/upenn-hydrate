@@ -1,14 +1,23 @@
-import { Calendar, Edit3, Save, Star, User, UserCheck, Users, X } from "lucide-react";
+import {
+  Calendar,
+  Edit3,
+  Save,
+  Star,
+  User,
+  UserCheck,
+  Users,
+  X,
+} from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
+import { BadgeDisplay } from "./BadgeDisplay";
 import type { Review } from "../services/reviewService";
 import { ReviewCard } from "./ReviewCard";
-import { BadgeDisplay } from "./BadgeDisplay";
 import { drinksService } from "../services/drinksService";
 import { getUserReviews } from "../services/reviewService";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 export const Profile: React.FC = () => {
   const { user } = useAuth();
@@ -17,6 +26,7 @@ export const Profile: React.FC = () => {
     display_name?: string;
     email?: string;
     total_ratings: number;
+    badges: string[];
     profile_picture_url?: string;
     followers: string[];
     following: string[];
@@ -94,6 +104,7 @@ export const Profile: React.FC = () => {
                   user.email?.split("@")[0] ||
                   "User",
                 total_ratings: 0,
+                badges: [],
                 followers: [],
                 following: [],
               },
@@ -174,7 +185,6 @@ export const Profile: React.FC = () => {
 
     return totalRating / reviews.length;
   };
-
 
   // Fetch followers list
   const fetchFollowersList = async () => {
@@ -350,7 +360,7 @@ export const Profile: React.FC = () => {
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
               {profile.total_ratings}
@@ -499,7 +509,10 @@ export const Profile: React.FC = () => {
                   <div
                     key={follower.id}
                     onClick={() => {
-                      console.log("Profile: Navigating to follower profile:", follower.id);
+                      console.log(
+                        "Profile: Navigating to follower profile:",
+                        follower.id
+                      );
                       setShowFollowersModal(false);
                       navigate(`/user/${follower.id}`);
                     }}
@@ -564,7 +577,10 @@ export const Profile: React.FC = () => {
                   <div
                     key={following.id}
                     onClick={() => {
-                      console.log("Profile: Navigating to following profile:", following.id);
+                      console.log(
+                        "Profile: Navigating to following profile:",
+                        following.id
+                      );
                       setShowFollowingModal(false);
                       navigate(`/user/${following.id}`);
                     }}
